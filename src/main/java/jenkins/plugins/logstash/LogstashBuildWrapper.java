@@ -46,7 +46,7 @@ import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsConfig;
 
 /**
  * Build wrapper that decorates the build's logger to insert a
- * {@link LogstashNote} on each output line.
+ * {@code LogstashNote} on each output line.
  *
  * @author K Jonathan Harker
  */
