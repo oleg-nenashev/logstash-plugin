@@ -49,6 +49,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.io.Serializable;
 
 /**
  * POJO for mapping build info to JSON.
@@ -56,9 +57,11 @@ import com.google.gson.GsonBuilder;
  * @author Rusty Gerard
  * @since 1.0.0
  */
-public class BuildData {
+public class BuildData implements Serializable {
+  
   // ISO 8601 date format
   public transient static final DateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+  private static final long serialVersionUID = 1L;
 
   public static class TestData {
     int totalCount, skipCount, failCount;
