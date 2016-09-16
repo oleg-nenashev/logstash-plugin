@@ -50,6 +50,9 @@ import org.apache.commons.lang.StringUtils;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Serializable;
+import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * POJO for mapping build info to JSON.
@@ -59,6 +62,8 @@ import java.io.Serializable;
  */
 public class BuildData implements Serializable {
   
+    private static final Logger LOGGER = Logger.getLogger(BuildData.class.getName());
+    
   // ISO 8601 date format
   public transient static final DateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
   private static final long serialVersionUID = 1L;
@@ -159,7 +164,14 @@ public class BuildData implements Serializable {
 
         env.buildEnvVars(buildEnvVariables);
         if (!buildEnvVariables.isEmpty()) {
-          buildVariables.putAll(buildEnvVariables);
+          for (Entry<String,String> entry : buildEnvVariables.entrySet()) {
+            // TODO: Parameterization
+            if (!entry.getKey().contains(".")) {
+              buildVariables.put(entry.getKey(), entry.getValue());
+            } else {
+              LOGGER.log(Level.FINE, "Cannot report variable with dot to Elasticsearch 2. Skipping it");   
+            }
+          }
           buildEnvVariables.clear();
         }
       }
