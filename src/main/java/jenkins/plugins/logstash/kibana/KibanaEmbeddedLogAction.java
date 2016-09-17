@@ -59,7 +59,7 @@ public class KibanaEmbeddedLogAction implements Action {
                 "time:(from:now-24h,mode:quick,to:now))" +
                 "&_a=(columns:!(message),filters:!()," +
                 "index:logstash,interval:auto,query:(query_string:(analyze_wildcard:!t," +
-                "query:'data.jobId%3D" + jobId + "%20AND%20data.buildNum%3D" + run.getNumber() + "'))," +
+                "query:'data.jobId:" + jobId + "%20AND%20data.buildNum:" + run.getNumber() + "'))," +
                 "sort:!('@timestamp',asc),vis:(aggs:!((params:(field:data.jobId,orderBy:'2',size:20)" + 
                 ",schema:segment,type:terms),(id:'2',schema:metric,type:count)),type:histogram))" + 
                 "&indexPattern=logstash&type=histogram";
