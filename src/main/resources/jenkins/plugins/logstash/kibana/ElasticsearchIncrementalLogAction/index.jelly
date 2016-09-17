@@ -36,7 +36,6 @@
           <pre class="console-output">
             <st:getOutput var="output" />
             <j:whitespace>${it.writeLogTo(offset,output)}</j:whitespace>
-            foo
           </pre>
         </j:otherwise>
       </j:choose>
