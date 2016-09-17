@@ -145,11 +145,9 @@ public class ElasticsearchIncrementalLogAction implements Action {
         
         ByteBuffer buffer = new ByteBuffer();
         Collection<String> pulledLogs = dao.pullLogs(run, 0, Long.MAX_VALUE);
-        int pos = initialOffset;
         for (String logEntry : pulledLogs) {
             byte[] bytes = logEntry.getBytes();
-            buffer.write(bytes, pos, bytes.length);
-            pos += bytes.length;
+            buffer.write(bytes, 0, bytes.length);
         }
         return buffer;
     }
