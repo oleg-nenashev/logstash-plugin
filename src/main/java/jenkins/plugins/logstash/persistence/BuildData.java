@@ -136,7 +136,7 @@ public class BuildData implements Serializable {
   public BuildData(Run<?, ?> run, Date currentTime) {
     result = run.getResult() == null ? null : run.getResult().toString();
     id = run.getId();
-    jobId =  UniqueIdHelper.getOrCreateId(run.getParent());
+    jobId =  UniqueIdHelper.getOrCreateId(run);
     projectName = run.getParent().getName();
     displayName = run.getDisplayName();
     fullDisplayName = run.getFullDisplayName();

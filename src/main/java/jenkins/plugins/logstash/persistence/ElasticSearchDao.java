@@ -44,6 +44,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import jenkins.plugins.logstash.util.UniqueIdHelper;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
@@ -139,17 +140,20 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
         CloseableHttpClient httpClient = null;
         CloseableHttpResponse response = null;
         
+      // Determine job id
+      String jobId = UniqueIdHelper.getOrCreateId(run);
+        
         // Prepare query
         String query = "{\n" +
             "  \"fields\": [\"message\",\"@timestamp\"], \n" +
             "  \"query\": { \n" +
             "    \"bool\": { \n" +
             "      \"must\": [\n" +
-            "        { \"match\": { \"data.jobId\":   \"MDBjODAzN2ItYzQ1MC00YzY5LTkzMj\"}}, \n" +
-            "        { \"match\": { \"data.buildNum\": \"4\" }}  \n" +
+            "        { \"match\": { \"data.jobId\":   \"" + jobId + "\"}}, \n" +
+            "        { \"match\": { \"data.buildNum\": \"" + run.getNumber() + "\" }}  \n" +
             "      ],\n" +
             "      \"filter\": [ \n" +
-            "        { \"range\": { \"@timestamp\": { \"gte\": \"1000200030\" }}}\n" +
+            "        { \"range\": { \"@timestamp\": { \"gte\": \"" + run.getStartTimeInMillis() + "\" }}}\n" +
             "      ]\n" +
             "    }\n" +
             "  }\n" +

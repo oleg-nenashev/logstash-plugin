@@ -58,7 +58,7 @@ public class ElasticsearchIncrementalLogAction implements Action {
     
     public ElasticsearchIncrementalLogAction(Run run) {
         this.run = run;
-        this.jobId =  UniqueIdHelper.getOrCreateId(run.getParent());
+        this.jobId =  UniqueIdHelper.getOrCreateId(run);
     }
     
     @Override

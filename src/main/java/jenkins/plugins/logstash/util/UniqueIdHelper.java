@@ -5,7 +5,9 @@
  */
 package jenkins.plugins.logstash.util;
 
+import hudson.model.Run;
 import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.uniqueid.IdStore;
 import org.kohsuke.accmod.Restricted;
@@ -19,7 +21,13 @@ public class UniqueIdHelper {
     
     @Restricted(NoExternalUse.class)
     @CheckForNull
-    public static String getOrCreateId(hudson.model.Job<?,?> job) {
+    public static String getOrCreateId(@Nonnull Run<?,?> run) {
+        return getOrCreateId(run.getParent());
+    }
+    
+    @Restricted(NoExternalUse.class)
+    @CheckForNull
+    public static String getOrCreateId(@Nonnull hudson.model.Job<?,?> job) {
      if (Jenkins.getInstance() == null) {
          return null;
      }
