@@ -103,7 +103,7 @@ public class LogstashBuildWrapper extends BuildWrapper {
                 final InputStream in = (ps.stdin() == null || ps.stdin() == NULL_INPUT_STREAM) ? null : new RemoteInputStream(ps.stdin(), false);
                 final String workDir = ps.pwd() == null ? null : ps.pwd().getRemote();
 
-                // TODO: we do not reverse streams
+                // TODO: we do not reverse streams => the parameters
                 try {
                     final RemoteLaunchCallable callable = new RemoteLaunchCallable(
                             ps.cmds(), ps.masks(), ps.envs(), in, 
