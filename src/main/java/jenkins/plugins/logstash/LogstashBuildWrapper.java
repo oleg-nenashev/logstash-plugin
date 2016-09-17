@@ -44,7 +44,10 @@ import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper.VarPasswordPair;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsConfig;
 import hudson.CloseProofOutputStream;
+import hudson.EnvVars;
+import hudson.FilePath;
 import hudson.Proc;
+import hudson.console.ConsoleLogFilter;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
@@ -54,6 +57,7 @@ import java.io.InterruptedIOException;
 import java.io.Serializable;
 import jenkins.model.Jenkins;
 import jenkins.security.MasterToSlaveCallable;
+import jenkins.tasks.SimpleBuildWrapper;
 import org.apache.commons.io.input.NullInputStream;
 
 /**
@@ -62,7 +66,7 @@ import org.apache.commons.io.input.NullInputStream;
  *
  * @author K Jonathan Harker
  */
-public class LogstashBuildWrapper extends BuildWrapper {
+public class LogstashBuildWrapper extends SimpleBuildWrapper {
 
   /**
    * Create a new {@link LogstashBuildWrapper}.
@@ -70,15 +74,13 @@ public class LogstashBuildWrapper extends BuildWrapper {
   @DataBoundConstructor
   public LogstashBuildWrapper() {}
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public Environment setUp(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-
-    return new Environment() {};
-  }
-  
+    @Override
+    public void setUp(Context context, Run<?, ?> build, FilePath workspace, 
+            Launcher launcher, TaskListener listener, EnvVars initialEnvironment) 
+            throws IOException, InterruptedException {
+        // Do nothing
+    }
+   
   private static final NullInputStream NULL_INPUT_STREAM = new NullInputStream(0);
   
     @Override
@@ -208,12 +210,20 @@ public class LogstashBuildWrapper extends BuildWrapper {
         private static final long serialVersionUID = 1L;
     }
 
+    @Override
+    public ConsoleLogFilter createLoggerDecorator(Run<?, ?> build) {
+        if (build instanceof AbstractBuild) {
+            return new ConsoleLogFilter() {
+                @Override
+                public OutputStream decorateLogger(AbstractBuild build, OutputStream logger) throws IOException, InterruptedException {
+                    return _decorateLogger(build, logger);
+                }
+            };
+        }
+        return null;
+    }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public OutputStream decorateLogger(AbstractBuild build, OutputStream logger) {
+  private OutputStream _decorateLogger(AbstractBuild build, OutputStream logger) {
     LogstashWriter logstash = getLogStashWriter(build, logger);
 
     LogstashOutputStream los = new LogstashOutputStream(logger, logstash);
@@ -271,7 +281,7 @@ public class LogstashBuildWrapper extends BuildWrapper {
     public String getDisplayName() {
       return Messages.DisplayName();
     }
-
+    
     /**
      * {@inheritDoc}
      */
