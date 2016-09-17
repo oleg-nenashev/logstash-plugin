@@ -6,6 +6,7 @@
 package jenkins.plugins.logstash.kibana;
 
 import com.jcraft.jzlib.GZIPInputStream;
+import com.jcraft.jzlib.GZIPOutputStream;
 import com.trilead.ssh2.crypto.Base64;
 import hudson.console.AnnotatedLargeText;
 import hudson.console.ConsoleAnnotationOutputStream;
@@ -20,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import static java.lang.Math.abs;
@@ -31,6 +33,7 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
+import javax.crypto.CipherOutputStream;
 import jenkins.model.Jenkins;
 import jenkins.plugins.logstash.LogstashInstallation;
 import jenkins.plugins.logstash.persistence.IndexerDaoFactory;
@@ -38,11 +41,13 @@ import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
 import jenkins.plugins.logstash.util.UniqueIdHelper;
 import jenkins.security.CryptoConfidentialKey;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.jelly.XMLOutput;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.framework.io.ByteBuffer;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
@@ -159,19 +164,35 @@ public class ElasticsearchIncrementalLogAction implements Action {
             this.context = context;
             this.memory = memory;
         }
-        
+         
+        @Override
         public long writeHtmlTo(long start, Writer w) throws IOException {
             ConsoleAnnotationOutputStream caw = new ConsoleAnnotationOutputStream(
                     w, createAnnotator(Stapler.getCurrentRequest()), context, charset);
             long r = super.writeLogTo(start, caw);
+            caw.flush();
             long initial = memory.length();
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Cipher sym = PASSING_ANNOTATOR.encrypt();
+            ObjectOutputStream oos = new ObjectOutputStream(new GZIPOutputStream(new CipherOutputStream(baos, sym)));
+            oos.writeLong(System.currentTimeMillis()); // send timestamp to prevent a replay attack
+            oos.writeObject(caw.getConsoleAnnotator());
+            oos.close();
+            StaplerResponse rsp = Stapler.getCurrentResponse();
+            if (rsp != null) {
+                rsp.setHeader("X-ConsoleAnnotator", new String(Base64.encode(baos.toByteArray())));
+            }
+            return r;
+            
+            /*
             try {
                 memory.writeTo(caw);
             } finally {
                 caw.flush();
                 caw.close();
             }
-            return initial - memory.length();
+            return initial - memory.length(); */
         }
         
         /**
