@@ -20,12 +20,8 @@ public class LoggingMethodFactory extends LoggingMethodLocator {
 
     @Override
     protected LoggingMethod getLoggingMethod(Run run) {
-        if (run instanceof AbstractBuild) {
-            AbstractBuild build = (AbstractBuild)run;
-            // TODO: return null if LogstashWrapper is disabled
-            return new LogstashDaoLoggingMethod();
-        }
-        return null;
+        // TODO: return null if LogstashWrapper is disabled
+        return new LogstashDaoLoggingMethod();
     }
     
 }

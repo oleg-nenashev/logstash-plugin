@@ -49,16 +49,13 @@ public class LogstashDaoLoggingMethod extends LoggingMethod {
     }
 
     @Override
-    public ConsoleLogFilter createLoggerDecorator(Run<?, ?> build) {
-        if (build instanceof AbstractBuild) {
-            return new ConsoleLogFilter() {
-                @Override
-                public OutputStream decorateLogger(AbstractBuild build, OutputStream logger) throws IOException, InterruptedException {
-                    return _decorateLogger(build, logger);
-                }
-            };
-        }
-        return null;
+    public ConsoleLogFilter createLoggerDecorator(Run<?, ?> run) {
+        return new ConsoleLogFilter() {
+            @Override
+            public OutputStream decorateLogger(Run run, OutputStream logger) throws IOException, InterruptedException {
+                return _decorateLogger(run, logger);
+            }
+        };
     }
 
     // Method to encapsulate calls for unit-testing
@@ -66,7 +63,7 @@ public class LogstashDaoLoggingMethod extends LoggingMethod {
         return new LogstashWriter(run, errorStream);
     }
     
-    private OutputStream _decorateLogger(AbstractBuild build, OutputStream logger) {
+    private OutputStream _decorateLogger(Run build, OutputStream logger) {
         LogstashWriter logstash = getLogStashWriter(build, logger);
         LogstashOutputStream los = new LogstashOutputStream(logger, logstash);
         return los.maskPasswords(getVarPasswordPairs(build));
