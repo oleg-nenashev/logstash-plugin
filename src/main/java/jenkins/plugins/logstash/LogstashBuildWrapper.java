@@ -90,8 +90,12 @@ public class LogstashBuildWrapper extends BuildWrapper {
         return new Launcher.DecoratedLauncher(launcher) {
             public Proc launch(Launcher.ProcStarter ps) throws IOException {
                 final RemoteLogstashWriter wr = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
-                final OutputStreamWrapper stream = new OutputStreamWrapper(wr);
                 
+                List<String> passwordStrings = new ArrayList<String>();
+                for (VarPasswordPair password: getVarPasswordPairs(build)) {
+                  passwordStrings.add(password.getPassword());
+                }
+                final OutputStreamWrapper stream = new OutputStreamWrapper(wr, passwordStrings);
                 
                 // RemoteLogstashReporterStream(new CloseProofOutputStream(ps.stdout()
                 final OutputStream out = ps.stdout() == null ? null : stream;
@@ -117,13 +121,15 @@ public class LogstashBuildWrapper extends BuildWrapper {
     private static class OutputStreamWrapper extends OutputStream implements Serializable {
 
         private final RemoteLogstashWriter wr;
+        private final List<String> passwordStrings;
 
-        public OutputStreamWrapper(RemoteLogstashWriter wr) {
+        public OutputStreamWrapper(RemoteLogstashWriter wr, List<String> passwordStrings) {
             this.wr = wr;
+            this.passwordStrings = passwordStrings;
         }
         
         public Object readResolve() {
-            return new RemoteLogstashOutputStream(wr);
+            return new RemoteLogstashOutputStream(wr).maskPasswords(passwordStrings);
         }
         
         @Override
@@ -218,12 +224,16 @@ public class LogstashBuildWrapper extends BuildWrapper {
 
     LogstashOutputStream los = new LogstashOutputStream(logger, logstash);
 
+    return los.maskPasswords(getVarPasswordPairs(build));
+  }
+  
+  private List<VarPasswordPair> getVarPasswordPairs(AbstractBuild build)
+  {
+    List<VarPasswordPair> allPasswordPairs = new ArrayList<VarPasswordPair>();
     if (build.getProject() instanceof BuildableItemWithBuildWrappers) {
       BuildableItemWithBuildWrappers project = (BuildableItemWithBuildWrappers) build.getProject();
       for (BuildWrapper wrapper: project.getBuildWrappersList()) {
         if (wrapper instanceof MaskPasswordsBuildWrapper) {
-          List<VarPasswordPair> allPasswordPairs = new ArrayList<VarPasswordPair>();
-
           MaskPasswordsBuildWrapper maskPasswordsWrapper = (MaskPasswordsBuildWrapper) wrapper;
           List<VarPasswordPair> jobPasswordPairs = maskPasswordsWrapper.getVarPasswordPairs();
           if (jobPasswordPairs != null) {
@@ -236,14 +246,12 @@ public class LogstashBuildWrapper extends BuildWrapper {
             allPasswordPairs.addAll(globalPasswordPairs);
           }
 
-          return los.maskPasswords(allPasswordPairs);
+          return allPasswordPairs;
         }
       }
     }
-
-    return los;
+    return allPasswordPairs;
   }
-
   public DescriptorImpl getDescriptor() {
     return (DescriptorImpl) super.getDescriptor();
   }

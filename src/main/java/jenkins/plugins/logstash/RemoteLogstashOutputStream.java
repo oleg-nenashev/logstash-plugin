@@ -26,9 +26,11 @@ package jenkins.plugins.logstash;
 import hudson.console.ConsoleNote;
 import hudson.console.LineTransformationOutputStream;
 
+import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsOutputStream;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.List;
 
 /**
  * Output stream that writes each line to the provided delegate output stream
@@ -48,14 +50,11 @@ public class RemoteLogstashOutputStream extends LineTransformationOutputStream {
         this.logstash = logstash;
     }
 
-    /*
-  public MaskPasswordsOutputStream maskPasswords(List<VarPasswordPair> passwords) {
-    List<String> passwordStrings = new ArrayList<String>();
-    for (VarPasswordPair password: passwords) {
-      passwordStrings.add(password.getPassword());
+    
+    public MaskPasswordsOutputStream maskPasswords(List<String> passwordStrings) {
+      return new MaskPasswordsOutputStream(this, passwordStrings);
     }
-    return new MaskPasswordsOutputStream(this, passwordStrings);
-  }*/
+    
     @Override
     protected void eol(byte[] b, int len) throws IOException {
         try {
