@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package jenkins.plugins.logstash;
+package jenkins.plugins.logstash.remoteLogging;
 
 import hudson.console.ConsoleNote;
 import hudson.console.LineTransformationOutputStream;

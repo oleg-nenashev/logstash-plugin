@@ -24,6 +24,8 @@
 
 package jenkins.plugins.logstash;
 
+import jenkins.plugins.logstash.remoteLogging.RemoteLogstashWriter;
+import jenkins.plugins.logstash.remoteLogging.RemoteLogstashOutputStream;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.BuildListener;
@@ -48,6 +50,7 @@ import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Proc;
 import hudson.console.ConsoleLogFilter;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.Channel;
@@ -59,6 +62,8 @@ import jenkins.model.Jenkins;
 import jenkins.security.MasterToSlaveCallable;
 import jenkins.tasks.SimpleBuildWrapper;
 import org.apache.commons.io.input.NullInputStream;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Build wrapper that decorates the build's logger to insert a
@@ -80,199 +85,9 @@ public class LogstashBuildWrapper extends SimpleBuildWrapper {
             throws IOException, InterruptedException {
         // Do nothing
     }
-   
-  private static final NullInputStream NULL_INPUT_STREAM = new NullInputStream(0);
   
-    @Override
-    public Launcher decorateLauncher(final AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException, Run.RunnerAbortedException {
-        if (build.getBuiltOn().getNodeName().isEmpty()) {
-            return super.decorateLauncher(build, launcher, listener);
-        }
-        
-        return new Launcher.DecoratedLauncher(launcher) {
-            public Proc launch(Launcher.ProcStarter ps) throws IOException {
-                final RemoteLogstashWriter wrOut = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
-                final RemoteLogstashWriter wrErr = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
-                
-                List<String> passwordStrings = new ArrayList<String>();
-                for (VarPasswordPair password: getVarPasswordPairs(build)) {
-                  passwordStrings.add(password.getPassword());
-                }
-                final OutputStreamWrapper streamOut = new OutputStreamWrapper(wrOut, passwordStrings, "");
-                final OutputStreamWrapper streamErr = new OutputStreamWrapper(wrErr, passwordStrings, "ERROR: ");
-                
-                // RemoteLogstashReporterStream(new CloseProofOutputStream(ps.stdout()
-                final OutputStream out = ps.stdout() == null ? null : streamOut;
-                final OutputStream err = ps.stdout() == null ? null : streamErr;
-                final InputStream in = (ps.stdin() == null || ps.stdin() == NULL_INPUT_STREAM) ? null : new RemoteInputStream(ps.stdin(), false);
-                final String workDir = ps.pwd() == null ? null : ps.pwd().getRemote();
-
-                // TODO: we do not reverse streams => the parameters
-                try {
-                    final RemoteLaunchCallable callable = new RemoteLaunchCallable(
-                            ps.cmds(), ps.masks(), ps.envs(), in, 
-                            false, out, false, err, 
-                            false, ps.quiet(), workDir, listener);
-                    
-                    return new Launcher.RemoteLauncher.ProcImpl(getChannel().call(callable));
-                } catch (InterruptedException e) {
-                    throw (IOException) new InterruptedIOException().initCause(e);
-                }
-            }
-        };
-    }
-    
-    private static class OutputStreamWrapper extends OutputStream implements Serializable {
-
-        private final RemoteLogstashWriter wr;
-        private final List<String> passwordStrings;
-        private final String prefix;
-
-        public OutputStreamWrapper(RemoteLogstashWriter wr, List<String> passwordStrings, String prefix) {
-            this.wr = wr;
-            this.passwordStrings = passwordStrings;
-            this.prefix = prefix;
-        }
-        
-        public Object readResolve() {
-            return new RemoteLogstashOutputStream(wr, prefix).maskPasswords(passwordStrings);
-        }
-        
-        @Override
-        public void write(int b) throws IOException {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-        
-    }
-                
-    private static class RemoteLaunchCallable extends MasterToSlaveCallable<Launcher.RemoteProcess,IOException> {
-        private final List<String> cmd;
-        private final boolean[] masks;
-        private final String[] env;
-        private final InputStream in;
-        private final OutputStream out;
-        private final OutputStream err;
-        private final String workDir;
-        private final TaskListener listener;
-        private final boolean reverseStdin, reverseStdout, reverseStderr;
-        private final boolean quiet;
-
-        RemoteLaunchCallable(List<String> cmd, boolean[] masks, String[] env, InputStream in, boolean reverseStdin, OutputStream out, boolean reverseStdout, OutputStream err, boolean reverseStderr, boolean quiet, String workDir, TaskListener listener) {
-            this.cmd = new ArrayList<String>(cmd);
-            this.masks = masks;
-            this.env = env;
-            this.in = in;
-            this.out = out;
-            this.err = err;
-            this.workDir = workDir;
-            this.listener = listener;
-            this.reverseStdin = reverseStdin;
-            this.reverseStdout = reverseStdout;
-            this.reverseStderr = reverseStderr;
-            this.quiet = quiet;
-        }
-
-        public Launcher.RemoteProcess call() throws IOException {
-            Launcher.ProcStarter ps = new Launcher.LocalLauncher(listener).launch();
-            ps.cmds(cmd).masks(masks).envs(env).stdin(in).stdout(out).stderr(err).quiet(quiet);
-            if(workDir!=null)   ps.pwd(workDir);
-            if (reverseStdin)   ps.writeStdin();
-            if (reverseStdout)  ps.readStdout();
-            if (reverseStderr)  ps.readStderr();
-
-            final Proc p = ps.start();
-
-            return Channel.current().export(Launcher.RemoteProcess.class,new Launcher.RemoteProcess() {
-                public int join() throws InterruptedException, IOException {
-                    try {
-                        return p.join();
-                    } finally {
-                        // make sure I/O is delivered to the remote before we return
-                        try {
-                            Channel.current().syncIO();
-                        } catch (Throwable _) {
-                            // this includes a failure to sync, slave.jar too old, etc
-                        }
-                    }
-                }
-
-                public void kill() throws IOException, InterruptedException {
-                    p.kill();
-                }
-
-                public boolean isAlive() throws IOException, InterruptedException {
-                    return p.isAlive();
-                }
-
-                public Launcher.IOTriplet getIOtriplet() {
-                    Launcher.IOTriplet r = new Launcher.IOTriplet();
-                        /* TODO: we do not need reverse?
-                    if (reverseStdout)  r.stdout = new RemoteInputStream(p.getStdout());
-                    if (reverseStderr)  r.stderr = new RemoteInputStream(p.getStderr());
-                    if (reverseStdin)   r.stdin  = new RemoteOutputStream(p.getStdin());
-                    */
-                    return r;
-                    
-                }
-            });
-        }
-
-        private static final long serialVersionUID = 1L;
-    }
-
-    @Override
-    public ConsoleLogFilter createLoggerDecorator(Run<?, ?> build) {
-        if (build instanceof AbstractBuild) {
-            return new ConsoleLogFilter() {
-                @Override
-                public OutputStream decorateLogger(AbstractBuild build, OutputStream logger) throws IOException, InterruptedException {
-                    return _decorateLogger(build, logger);
-                }
-            };
-        }
-        return null;
-    }
-
-  private OutputStream _decorateLogger(AbstractBuild build, OutputStream logger) {
-    LogstashWriter logstash = getLogStashWriter(build, logger);
-
-    LogstashOutputStream los = new LogstashOutputStream(logger, logstash);
-
-    return los.maskPasswords(getVarPasswordPairs(build));
-  }
-  
-  private List<VarPasswordPair> getVarPasswordPairs(AbstractBuild build)
-  {
-    List<VarPasswordPair> allPasswordPairs = new ArrayList<VarPasswordPair>();
-    if (build.getProject() instanceof BuildableItemWithBuildWrappers) {
-      BuildableItemWithBuildWrappers project = (BuildableItemWithBuildWrappers) build.getProject();
-      for (BuildWrapper wrapper: project.getBuildWrappersList()) {
-        if (wrapper instanceof MaskPasswordsBuildWrapper) {
-          MaskPasswordsBuildWrapper maskPasswordsWrapper = (MaskPasswordsBuildWrapper) wrapper;
-          List<VarPasswordPair> jobPasswordPairs = maskPasswordsWrapper.getVarPasswordPairs();
-          if (jobPasswordPairs != null) {
-            allPasswordPairs.addAll(jobPasswordPairs);
-          }
-
-          MaskPasswordsConfig config = MaskPasswordsConfig.getInstance();
-          List<VarPasswordPair> globalPasswordPairs = config.getGlobalVarPasswordPairs();
-          if (globalPasswordPairs != null) {
-            allPasswordPairs.addAll(globalPasswordPairs);
-          }
-
-          return allPasswordPairs;
-        }
-      }
-    }
-    return allPasswordPairs;
-  }
   public DescriptorImpl getDescriptor() {
     return (DescriptorImpl) super.getDescriptor();
-  }
-
-  // Method to encapsulate calls for unit-testing
-  LogstashWriter getLogStashWriter(AbstractBuild<?, ?> build, OutputStream errorStream) {
-    return new LogstashWriter(build, errorStream);
   }
 
   /**

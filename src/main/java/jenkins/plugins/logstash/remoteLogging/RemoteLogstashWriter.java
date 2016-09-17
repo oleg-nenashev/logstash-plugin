@@ -21,9 +21,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package jenkins.plugins.logstash;
+package jenkins.plugins.logstash.remoteLogging;
 
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import jenkins.plugins.logstash.persistence.BuildData;
 import jenkins.plugins.logstash.persistence.IndexerDaoFactory;
 import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
@@ -32,16 +32,14 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import java.util.logging.Logger;
+import jenkins.plugins.logstash.LogstashInstallation;
 
 /**
  * A writer that wraps all Logstash DAOs. Handles error reporting and per build
@@ -65,12 +63,12 @@ public class RemoteLogstashWriter implements Serializable {
 
     final IndexerDaoFactory.Info info;
 
-    public RemoteLogstashWriter(AbstractBuild<?, ?> build, Jenkins jenkins) {
+    public RemoteLogstashWriter(Run run, Jenkins jenkins) {
         LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
         info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
 
         this.jenkinsUrl = jenkins.getRootUrl();
-        this.buildData = new BuildData(build, new Date());;
+        this.buildData = new BuildData(run, new Date());;
     }
 
     public Object readResolve() {
