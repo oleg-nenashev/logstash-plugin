@@ -54,6 +54,7 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import jenkins.plugins.logstash.util.UniqueIdHelper;
 import org.jenkinsci.plugins.uniqueid.IdStore;
 
 /**
@@ -131,7 +132,7 @@ public class BuildData implements Serializable {
   public BuildData(AbstractBuild<?, ?> build, Date currentTime) {
     result = build.getResult() == null ? null : build.getResult().toString();
     id = build.getId();
-    jobId = getOrCreateId(build.getProject());
+    jobId =  UniqueIdHelper.getOrCreateId(build.getProject());
     projectName = build.getProject().getName();
     displayName = build.getDisplayName();
     fullDisplayName = build.getFullDisplayName();
@@ -206,14 +207,7 @@ public class BuildData implements Serializable {
   }
 
   
-  private String getOrCreateId(hudson.model.Job<?,?> job) {
-     String id = IdStore.getId(job);
-     if (id == null) {
-         IdStore.makeId(job);
-         id = IdStore.getId(job);;
-     }
-     return id;
-  }
+  
   
   /**
    * Gets unique id of the plugin.

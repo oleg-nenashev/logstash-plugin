@@ -78,7 +78,7 @@ public class LogstashBuildWrapper extends BuildWrapper {
 
     return new Environment() {};
   }
-
+  
   private static final NullInputStream NULL_INPUT_STREAM = new NullInputStream(0);
   
     @Override
