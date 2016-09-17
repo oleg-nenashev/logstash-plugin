@@ -141,7 +141,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
         
         // Prepare query
         String query = "{\n" +
-            "  \"fields\": [\"message\"], \n" +
+            "  \"fields\": [\"message\",\"@timestamp\"], \n" +
             "  \"query\": { \n" +
             "    \"bool\": { \n" +
             "      \"must\": [\n" +
@@ -183,8 +183,9 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
             ArrayList<String> res = new ArrayList<>(jsonArray.size());
             for (int i=0; i<jsonArray.size(); ++i) {
                 JSONObject hit = jsonArray.getJSONObject(i);
+                String timestamp = hit.getJSONObject("fields").getJSONArray("@timestamp").getString(0);
                 String message = hit.getJSONObject("fields").getJSONArray("message").getString(0);
-                res.add(message);
+                res.add(timestamp + " > " +message);
             }
             return res;
             
