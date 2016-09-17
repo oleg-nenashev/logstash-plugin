@@ -42,12 +42,14 @@ import java.util.List;
 public class RemoteLogstashOutputStream extends LineTransformationOutputStream {
 
     final RemoteLogstashWriter logstash;
+    final String prefix;
 
     private static final Logger LOGGER = Logger.getLogger(RemoteLogstashOutputStream.class.getName());
 
-    public RemoteLogstashOutputStream(RemoteLogstashWriter logstash) {
+    public RemoteLogstashOutputStream(RemoteLogstashWriter logstash, String prefix) {
         super();
         this.logstash = logstash;
+        this.prefix = prefix;
     }
 
     
@@ -62,7 +64,7 @@ public class RemoteLogstashOutputStream extends LineTransformationOutputStream {
             if (!logstash.isConnectionBroken()) {
                 String line = new String(b, 0, len).trim();
                 line = ConsoleNote.removeNotes(line);
-                logstash.write(line);
+                logstash.write(prefix + line);
             }
         } catch (Throwable ex) {
             LOGGER.log(Level.SEVERE, "BOOM", ex);

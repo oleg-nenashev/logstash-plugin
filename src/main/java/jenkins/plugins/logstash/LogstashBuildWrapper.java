@@ -89,17 +89,19 @@ public class LogstashBuildWrapper extends BuildWrapper {
         
         return new Launcher.DecoratedLauncher(launcher) {
             public Proc launch(Launcher.ProcStarter ps) throws IOException {
-                final RemoteLogstashWriter wr = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
+                final RemoteLogstashWriter wrOut = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
+                final RemoteLogstashWriter wrErr = new RemoteLogstashWriter(build, Jenkins.getActiveInstance());
                 
                 List<String> passwordStrings = new ArrayList<String>();
                 for (VarPasswordPair password: getVarPasswordPairs(build)) {
                   passwordStrings.add(password.getPassword());
                 }
-                final OutputStreamWrapper stream = new OutputStreamWrapper(wr, passwordStrings);
+                final OutputStreamWrapper streamOut = new OutputStreamWrapper(wrOut, passwordStrings, "");
+                final OutputStreamWrapper streamErr = new OutputStreamWrapper(wrErr, passwordStrings, "ERROR: ");
                 
                 // RemoteLogstashReporterStream(new CloseProofOutputStream(ps.stdout()
-                final OutputStream out = ps.stdout() == null ? null : stream;
-                final OutputStream err = ps.stdout() == null ? null : stream;
+                final OutputStream out = ps.stdout() == null ? null : streamOut;
+                final OutputStream err = ps.stdout() == null ? null : streamErr;
                 final InputStream in = (ps.stdin() == null || ps.stdin() == NULL_INPUT_STREAM) ? null : new RemoteInputStream(ps.stdin(), false);
                 final String workDir = ps.pwd() == null ? null : ps.pwd().getRemote();
 
@@ -122,14 +124,16 @@ public class LogstashBuildWrapper extends BuildWrapper {
 
         private final RemoteLogstashWriter wr;
         private final List<String> passwordStrings;
+        private final String prefix;
 
-        public OutputStreamWrapper(RemoteLogstashWriter wr, List<String> passwordStrings) {
+        public OutputStreamWrapper(RemoteLogstashWriter wr, List<String> passwordStrings, String prefix) {
             this.wr = wr;
             this.passwordStrings = passwordStrings;
+            this.prefix = prefix;
         }
         
         public Object readResolve() {
-            return new RemoteLogstashOutputStream(wr).maskPasswords(passwordStrings);
+            return new RemoteLogstashOutputStream(wr, prefix).maskPasswords(passwordStrings);
         }
         
         @Override
