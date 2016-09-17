@@ -24,7 +24,9 @@
 
 package jenkins.plugins.logstash.persistence;
 
+import hudson.model.Run;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import net.sf.json.JSONObject;
@@ -56,6 +58,18 @@ public interface LogstashIndexerDao {
    *          The data is not written to the server
    */
   void push(String data) throws IOException;
+  
+  // TODO: Incremental checkout?
+  // TODO: Replace by a Collection output
+  /**
+   * Retrieves build log from the storage.
+   * @param run Run, for which the log should be retrieved
+   * @param sinceMs Start time
+   * @param toMs End time
+   * @return Retrieved data
+   * @throws IOException Operation error
+   */
+  Collection<String> pullLogs(Run run, long sinceMs, long toMs) throws IOException;
 
   /**
    * Builds a JSON payload compatible with the Logstash schema.

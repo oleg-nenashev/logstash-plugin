@@ -24,7 +24,10 @@
 
 package jenkins.plugins.logstash.persistence;
 
+import hudson.model.Run;
+import java.io.IOException;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -74,4 +77,9 @@ abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
   public String getDescription() {
     return this.host + ":" + this.port;
   }
+
+   @Override
+   public Collection<String> pullLogs(Run run, long sinceMs, long toMs) throws IOException {
+     throw new IOException("Destination does not support data read: " + this.getClass());
+   }
 }
