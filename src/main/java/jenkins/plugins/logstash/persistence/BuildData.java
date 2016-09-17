@@ -49,11 +49,16 @@ import org.apache.commons.lang.StringUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.Run;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import jenkins.plugins.logstash.util.UniqueIdHelper;
 import org.jenkinsci.plugins.uniqueid.IdStore;
 
 /**
@@ -128,63 +133,90 @@ public class BuildData implements Serializable {
     jobId = "";
   }
 
-  public BuildData(AbstractBuild<?, ?> build, Date currentTime) {
-    result = build.getResult() == null ? null : build.getResult().toString();
-    id = build.getId();
-    jobId = getOrCreateId(build.getProject());
-    projectName = build.getProject().getName();
-    displayName = build.getDisplayName();
-    fullDisplayName = build.getFullDisplayName();
-    description = build.getDescription();
-    url = build.getUrl();
+  public BuildData(Run<?, ?> run, Date currentTime) {
+    result = run.getResult() == null ? null : run.getResult().toString();
+    id = run.getId();
+    jobId =  UniqueIdHelper.getOrCreateId(run.getParent());
+    projectName = run.getParent().getName();
+    displayName = run.getDisplayName();
+    fullDisplayName = run.getFullDisplayName();
+    description = run.getDescription();
+    url = run.getUrl();
 
-    Action testResultAction = build.getAction(AbstractTestResultAction.class);
+    Action testResultAction = run.getAction(AbstractTestResultAction.class);
     if (testResultAction != null) {
       testResults = new TestData(testResultAction);
     }
 
-    Node node = build.getBuiltOn();
-    if (node == null) {
-      buildHost = "master";
-      buildLabel = "master";
-    } else {
-      buildHost = StringUtils.isBlank(node.getDisplayName()) ? "master" : node.getDisplayName();
-      buildLabel = StringUtils.isBlank(node.getLabelString()) ? "master" : node.getLabelString();
-    }
-
-    buildNum = build.getNumber();
-    // build.getDuration() is always 0 in Notifiers
-    buildDuration = currentTime.getTime() - build.getStartTimeInMillis();
-    timestamp = DATE_FORMATTER.format(build.getTimestamp().getTime());
-    rootProjectName = build.getRootBuild().getProject().getName();
-    rootProjectDisplayName = build.getRootBuild().getDisplayName();
-    rootBuildNum = build.getRootBuild().getNumber();
-    buildVariables = build.getBuildVariables();
-    sensitiveBuildVariables = build.getSensitiveBuildVariables();
-
-    // Get environment build variables and merge them into the buildVariables map
-    Map<String, String> buildEnvVariables = new HashMap<String, String>();
-    List<Environment> buildEnvironments = build.getEnvironments();
-    if (buildEnvironments != null) {
-      for (Environment env : buildEnvironments) {
-        if (env == null) {
-          continue;
+    if (run instanceof AbstractBuild) {
+        AbstractBuild build = (AbstractBuild) run;
+        Node node = build.getBuiltOn();
+        if (node == null) {
+          buildHost = "master";
+          buildLabel = "master";
+        } else {
+          buildHost = StringUtils.isBlank(node.getDisplayName()) ? "master" : node.getDisplayName();
+          buildLabel = StringUtils.isBlank(node.getLabelString()) ? "master" : node.getLabelString();
         }
+        
+        buildVariables = build.getBuildVariables();
+        sensitiveBuildVariables = build.getSensitiveBuildVariables();
+        rootProjectName = build.getRootBuild().getProject().getName();
+        rootProjectDisplayName = build.getRootBuild().getDisplayName();
+        rootBuildNum = build.getRootBuild().getNumber();
+    
+        // Get environment build variables and merge them into the buildVariables map
+        Map<String, String> buildEnvVariables = new HashMap<String, String>();
+        List<Environment> buildEnvironments = build.getEnvironments();
+        if (buildEnvironments != null) {
+          for (Environment env : buildEnvironments) {
+            if (env == null) {
+              continue;
+            }
 
-        env.buildEnvVars(buildEnvVariables);
-        if (!buildEnvVariables.isEmpty()) {
-          for (Entry<String,String> entry : buildEnvVariables.entrySet()) {
-            // TODO: Parameterization
-            if (!entry.getKey().contains(".")) {
-              buildVariables.put(entry.getKey(), entry.getValue());
-            } else {
-              LOGGER.log(Level.FINE, "Cannot report variable with dot to Elasticsearch 2. Skipping it");   
+            env.buildEnvVars(buildEnvVariables);
+            if (!buildEnvVariables.isEmpty()) {
+              for (Entry<String,String> entry : buildEnvVariables.entrySet()) {
+                // TODO: Parameterization
+                if (!entry.getKey().contains(".")) {
+                  buildVariables.put(entry.getKey(), entry.getValue());
+                } else {
+                  LOGGER.log(Level.FINE, "Cannot report variable with dot to Elasticsearch 2. Skipping it");   
+                }
+              }
+              buildEnvVariables.clear();
             }
           }
-          buildEnvVariables.clear();
         }
-      }
+    } else { /** Pipeline job & Co */
+        // What we can easily fix
+        rootProjectName = run.getParent().getName();
+        rootProjectDisplayName = run.getParent().getDisplayName();
+        rootBuildNum = run.getNumber();
+        
+        // Params can be retrieved in any build
+        buildVariables = new HashMap<String, String>();
+        sensitiveBuildVariables = new HashSet<String>();
+        
+        ParametersAction parameters = run.getAction(ParametersAction.class);
+        if (parameters!=null) {
+            // this is a rather round about way of doing this...
+            for (ParameterValue p : parameters) {
+                buildVariables.put(p.getName(),p.getValue().toString());
+                if (p.isSensitive()) {
+                    sensitiveBuildVariables.add(p.getName());
+                }
+            }
+        }
+        
+        // TODO: Do something with environments
     }
+
+    buildNum = run.getNumber();
+    // build.getDuration() is always 0 in Notifiers
+    buildDuration = currentTime.getTime() - run.getStartTimeInMillis();
+    timestamp = DATE_FORMATTER.format(run.getTimestamp().getTime());
+    
     for (String key : sensitiveBuildVariables) {
       buildVariables.remove(key);
     }
@@ -206,14 +238,7 @@ public class BuildData implements Serializable {
   }
 
   
-  private String getOrCreateId(hudson.model.Job<?,?> job) {
-     String id = IdStore.getId(job);
-     if (id == null) {
-         IdStore.makeId(job);
-         id = IdStore.getId(job);;
-     }
-     return id;
-  }
+  
   
   /**
    * Gets unique id of the plugin.

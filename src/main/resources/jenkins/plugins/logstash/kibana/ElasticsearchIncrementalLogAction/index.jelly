@@ -1,0 +1,42 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <l:layout title="${it.displayName} Console" norefresh="true">
+  <st:include it="${it.run}" page="sidepanel.jelly" />
+  <l:main-panel>
+    <t:buildCaption>
+      ${%Console Output}
+    </t:buildCaption>
+
+    <script type="text/javascript" src="http://localhost:8080/jenkins/plugin/logstash/elasticsearch.js"></script>
+    <script>
+      var endpoint = 'http://localhost:9200/logstash/log';
+      // Form up any query here
+var myQuery = {
+"query": { 
+    "bool": { 
+      "must": [
+        { "match": { "data.jobId":   "MDBjODAzN2ItYzQ1MC00YzY5LTkzMj"}}, 
+        { "match": { "data.buildNum": "4" }}  
+      ],
+      "filter": [ 
+        { "range": { "@timestamp": { "gte": "1000200030" }}}
+      ]
+    }
+  }
+};
+// POST the query to ES
+var json = jQuery.ajax({
+url: "http://localhost:9200/logstash/log/_search",
+type: "POST",
+crossDomain: true,
+dataType: "json",
+data: JSON.stringify(myQuery),
+async: false
+});
+
+var jsonData = jQuery.parseJSON(json.responseText);
+// You can then do anything you like with this jsonData
+    </script>
+  </l:main-panel>
+  </l:layout>  
+</j:jelly>
