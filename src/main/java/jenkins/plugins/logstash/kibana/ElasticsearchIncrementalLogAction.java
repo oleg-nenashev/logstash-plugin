@@ -87,14 +87,11 @@ public class ElasticsearchIncrementalLogAction implements Action {
     /**
      * Used from <tt>index.jelly</tt> to write annotated log to the given
      * output.
+     * @param offset offset of the log
+     * @param out destination output
      */
     public void writeLogTo(long offset, @Nonnull XMLOutput out) throws IOException {
         try {
-            StringWriter wr = new StringWriter();
-            //getLogText().writeHtmlTo(offset, wr);
-            getLogText().writeLogTo(offset, wr);
-            String res = wr.toString();
-            
             getLogText().writeHtmlTo(offset, out.asWriter());
         } catch (IOException e) {
             // try to fall back to the old getLogInputStream()
@@ -129,11 +126,10 @@ public class ElasticsearchIncrementalLogAction implements Action {
     
     /**
      * Returns an input stream that reads from the log file.
-     *
      * @throws IOException Operation error
-     * @since 1.349
      */
-    public @Nonnull ByteBuffer readLogToBuffer(int initialOffset) throws IOException {
+    @Nonnull 
+    public ByteBuffer readLogToBuffer(int initialOffset) throws IOException {
         LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
         IndexerDaoFactory.Info info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
         final LogstashIndexerDao dao;
@@ -148,6 +144,7 @@ public class ElasticsearchIncrementalLogAction implements Action {
         for (String logEntry : pulledLogs) {
             byte[] bytes = logEntry.getBytes();
             buffer.write(bytes, 0, bytes.length);
+            buffer.write('\n');
         }
         return buffer;
     }
@@ -164,12 +161,17 @@ public class ElasticsearchIncrementalLogAction implements Action {
         }
         
         public long writeHtmlTo(long start, Writer w) throws IOException {
-           // ConsoleAnnotationOutputStream caw = new ConsoleAnnotationOutputStream(
-           //         w, createAnnotator(Stapler.getCurrentRequest()), context, charset);
-           // long r = super.writeLogTo(start,caw);    
-           long initial = memory.length();
-           memory.writeTo(new WriterOutputStream(w));
-           return initial - memory.length();
+            ConsoleAnnotationOutputStream caw = new ConsoleAnnotationOutputStream(
+                    w, createAnnotator(Stapler.getCurrentRequest()), context, charset);
+            long r = super.writeLogTo(start, caw);
+            long initial = memory.length();
+            try {
+                memory.writeTo(caw);
+            } finally {
+                caw.flush();
+                caw.close();
+            }
+            return initial - memory.length();
         }
         
         /**
