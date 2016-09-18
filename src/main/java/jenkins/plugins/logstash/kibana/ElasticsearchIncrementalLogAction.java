@@ -90,7 +90,7 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
             // try to fall back to the old getLogInputStream()
             // mainly to support .gz compressed files
             // In this case, console annotation handling will be turned off.
-            InputStream input = readLogToBuffer(0).newInputStream();
+            InputStream input = readLogToBuffer(offset).newInputStream();
             try {
                 IOUtils.copy(input, out.asWriter());
             } finally {
@@ -118,7 +118,7 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
      * @throws IOException Operation error
      */
     @Nonnull 
-    public ByteBuffer readLogToBuffer(int initialOffset) throws IOException {
+    public ByteBuffer readLogToBuffer(long initialOffset) throws IOException {
         LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
         IndexerDaoFactory.Info info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
         final LogstashIndexerDao dao;
@@ -130,10 +130,13 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
         
         ByteBuffer buffer = new ByteBuffer();
         Collection<String> pulledLogs = dao.pullLogs(getRun(), 0, Long.MAX_VALUE);
+        long ctr = 0;
         for (String logEntry : pulledLogs) {
             byte[] bytes = logEntry.getBytes();
+            
             buffer.write(bytes, 0, bytes.length);
             buffer.write('\n');
+            
         }
         return buffer;
     }
@@ -156,7 +159,7 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
             long r = super.writeLogTo(start, caw);
             caw.flush();
             long initial = memory.length();
-            
+            /*
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Cipher sym = PASSING_ANNOTATOR.encrypt();
             ObjectOutputStream oos = new ObjectOutputStream(new GZIPOutputStream(new CipherOutputStream(baos, sym)));
@@ -168,6 +171,7 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
                 rsp.setHeader("X-ConsoleAnnotator", new String(Base64.encode(baos.toByteArray())));
             }
             return r;
+            */
             
             /*
             try {
@@ -175,8 +179,8 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
             } finally {
                 caw.flush();
                 caw.close();
-            }
-            return initial - memory.length(); */
+            }*/
+            return initial - memory.length(); 
         }
         
         /**
