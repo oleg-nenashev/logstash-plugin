@@ -16,21 +16,12 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
  * @author Oleg Nenashev
  */
 @Restricted(NoExternalUse.class)
-public class KibanaEmbeddedLogAction implements Action {
-    
-    private final String jobId;
-    private final Run run;
+public class KibanaEmbeddedLogAction extends AbstractConsoleAction {
     
     public KibanaEmbeddedLogAction(Run run) {
-        this.run = run;
-        this.jobId =  UniqueIdHelper.getOrCreateId(run);
+        super(run);
     }
     
-    @Override
-    public String getDisplayName() {
-        return "External log (Kibana)";
-    }
-
     @Override
     public String getIconFileName() {
         return "terminal.png";
@@ -40,13 +31,10 @@ public class KibanaEmbeddedLogAction implements Action {
     public String getUrlName() {
         return "externalLogKibana";
     } 
-
-    public Run getRun() {
-        return run;
-    }
-
-    public String getJobId() {
-        return jobId;
+    
+    @Override
+    public String getDataSourceDisplayName() {
+        return "Kibana";
     }
     
     @Restricted(NoExternalUse.class)
@@ -59,7 +47,7 @@ public class KibanaEmbeddedLogAction implements Action {
                 "time:(from:now-24h,mode:quick,to:now))" +
                 "&_a=(columns:!(message),filters:!()," +
                 "index:logstash,interval:auto,query:(query_string:(analyze_wildcard:!t," +
-                "query:'data.jobId:" + jobId + "%20AND%20data.buildNum:" + run.getNumber() + "'))," +
+                "query:'data.jobId:" + getJobId() + "%20AND%20data.buildNum:" + getRun().getNumber() + "'))," +
                 "sort:!('@timestamp',asc),vis:(aggs:!((params:(field:data.jobId,orderBy:'2',size:20)" + 
                 ",schema:segment,type:terms),(id:'2',schema:metric,type:count)),type:histogram))" + 
                 "&indexPattern=logstash&type=histogram";

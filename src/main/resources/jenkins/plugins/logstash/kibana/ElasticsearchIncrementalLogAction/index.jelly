@@ -4,9 +4,7 @@
   <l:layout title="${it.displayName} Console" norefresh="true">
   <st:include it="${it.run}" page="sidepanel.jelly" />
   <l:main-panel>
-    <t:buildCaption>
-      ${%Console Output}
-    </t:buildCaption>
+      <st:include page="buildCaption.jelly"/>
 
       <j:set var="threshold" value="${h.getSystemProperty('hudson.consoleTailKB')?:'150'}" />
       <!-- Show at most last 150KB (can override with system property) unless consoleFull is set -->

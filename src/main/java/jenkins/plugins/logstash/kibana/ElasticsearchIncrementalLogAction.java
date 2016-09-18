@@ -56,21 +56,12 @@ import org.kohsuke.stapler.framework.io.WriterOutputStream;
  * @author Oleg Nenashev
  */
 @Restricted(NoExternalUse.class)
-public class ElasticsearchIncrementalLogAction implements Action {
-    
-    private final String jobId;
-    private final Run run;
+public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
     
     public ElasticsearchIncrementalLogAction(Run run) {
-        this.run = run;
-        this.jobId =  UniqueIdHelper.getOrCreateId(run);
+        super(run);
     }
     
-    @Override
-    public String getDisplayName() {
-        return "External log (Elasticsearch)";
-    }
-
     @Override
     public String getIconFileName() {
         return "terminal.png";
@@ -81,14 +72,11 @@ public class ElasticsearchIncrementalLogAction implements Action {
         return "externalLog";
     } 
 
-    public Run getRun() {
-        return run;
+    @Override
+    public String getDataSourceDisplayName() {
+        return "Elasticsearch";
     }
 
-    public String getJobId() {
-        return jobId;
-    }
-    
     /**
      * Used from <tt>index.jelly</tt> to write annotated log to the given
      * output.
@@ -125,10 +113,6 @@ public class ElasticsearchIncrementalLogAction implements Action {
         return new UncompressedAnnotatedLargeText(buf, StandardCharsets.UTF_8, !isLogUpdated(), this);
     }
     
-    public boolean isLogUpdated() {
-        return run.isLogUpdated();
-    }
-    
     /**
      * Returns an input stream that reads from the log file.
      * @throws IOException Operation error
@@ -145,7 +129,7 @@ public class ElasticsearchIncrementalLogAction implements Action {
         }
         
         ByteBuffer buffer = new ByteBuffer();
-        Collection<String> pulledLogs = dao.pullLogs(run, 0, Long.MAX_VALUE);
+        Collection<String> pulledLogs = dao.pullLogs(getRun(), 0, Long.MAX_VALUE);
         for (String logEntry : pulledLogs) {
             byte[] bytes = logEntry.getBytes();
             buffer.write(bytes, 0, bytes.length);

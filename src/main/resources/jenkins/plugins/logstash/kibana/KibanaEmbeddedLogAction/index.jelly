@@ -3,9 +3,7 @@
   <l:layout title="${it.displayName} Console" norefresh="true">
   <st:include it="${it.run}" page="sidepanel.jelly" />
   <l:main-panel>
-    <t:buildCaption>
-      ${%Console Output}
-    </t:buildCaption>
+    <st:include page="buildCaption.jelly"/>
 
     <iframe src="${it.iframeSrc}" height="600" width="800"/>
   </l:main-panel>
