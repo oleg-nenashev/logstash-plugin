@@ -153,7 +153,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
             "        { \"match\": { \"data.buildNum\": \"" + run.getNumber() + "\" }}  \n" +
             "      ],\n" +
             "      \"filter\": [ \n" +
-            "        { \"range\": { \"@timestamp\": { \"gte\": \"" + run.getStartTimeInMillis() + "\" }}}\n" +
+            "        { \"range\": { \"@timestamp\": { \"gte\": \"" + (run.getStartTimeInMillis()-100000) + "\" }}}\n" +
             "      ]\n" +
             "    }\n" +
             "  }\n" +
