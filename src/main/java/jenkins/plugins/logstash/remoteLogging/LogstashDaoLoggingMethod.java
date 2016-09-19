@@ -6,6 +6,7 @@
 package jenkins.plugins.logstash.remoteLogging;
 
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper;
+import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper.VarPasswordPair;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsConfig;
 import hudson.Launcher;
 import hudson.Proc;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
@@ -40,15 +42,6 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 public class LogstashDaoLoggingMethod extends LoggingMethod {
 
     @Override
-    public Launcher decorateLauncher(Launcher l, Run run, Node node) {
-        if (node instanceof Jenkins) {
-            return new LocalLogstashLoggingLauncher(l);
-        } else {
-            return new RemoteLogstashLoggingLauncher(l, run);
-        }
-    }
-
-    @Override
     public ConsoleLogFilter createLoggerDecorator(Run<?, ?> run) {
         return new ConsoleLogFilter() {
             @Override
@@ -56,6 +49,26 @@ public class LogstashDaoLoggingMethod extends LoggingMethod {
                 return _decorateLogger(run, logger);
             }
         };
+    }
+
+    @Override
+    public OutputStreamWrapper provideOutStream(Run run) {
+        RemoteLogstashWriter wr = new RemoteLogstashWriter(run, Jenkins.getInstance());
+        List<String> passwords = new ArrayList<>();
+        for (VarPasswordPair pair : getVarPasswordPairs(run)) {
+            passwords.add(pair.getPassword());
+        }
+        return new LogstashOutputStreamWrapper(wr, passwords, "");
+    }
+
+    @Override
+    public OutputStreamWrapper provideErrStream(Run run) {
+        RemoteLogstashWriter wr = new RemoteLogstashWriter(run, Jenkins.getInstance());
+        List<String> passwords = new ArrayList<>();
+        for (VarPasswordPair pair : getVarPasswordPairs(run)) {
+            passwords.add(pair.getPassword());
+        }
+        return new LogstashOutputStreamWrapper(wr, passwords, "Error: ");
     }
 
     // Method to encapsulate calls for unit-testing
@@ -94,6 +107,29 @@ public class LogstashDaoLoggingMethod extends LoggingMethod {
             }
         }
         return allPasswordPairs;
+    }
+
+    private static class LogstashOutputStreamWrapper extends OutputStreamWrapper {
+
+        private final RemoteLogstashWriter wr;
+        private final List<String> passwordStrings;
+        private final String prefix;
+
+        public LogstashOutputStreamWrapper(RemoteLogstashWriter wr, List<String> passwordStrings, String prefix) {
+            this.wr = wr;
+            this.passwordStrings = passwordStrings;
+            this.prefix = prefix;
+        }
+
+        public Object readResolve() {
+            return new RemoteLogstashOutputStream(wr, prefix).maskPasswords(passwordStrings);
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
     }
 
 }
