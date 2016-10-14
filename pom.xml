@@ -9,7 +9,7 @@
   </parent>
   
   <properties>
-    <jenkins.version>2.26-SNAPSHOT</jenkins.version>
+    <jenkins.version>2.24</jenkins.version>
   </properties>
 
   <repositories>
