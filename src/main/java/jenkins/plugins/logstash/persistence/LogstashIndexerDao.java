@@ -26,6 +26,7 @@ package jenkins.plugins.logstash.persistence;
 
 import hudson.model.Run;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
@@ -37,7 +38,7 @@ import net.sf.json.JSONObject;
  * @author Rusty Gerard
  * @since 1.0.0
  */
-public interface LogstashIndexerDao {
+public interface LogstashIndexerDao extends Serializable {
   static enum IndexerType {
     REDIS,
     RABBIT_MQ,

@@ -69,6 +69,7 @@ public class RemoteLogstashWriter implements Serializable {
 
         this.jenkinsUrl = jenkins.getRootUrl();
         this.buildData = new BuildData(run, new Date());;
+        init();
     }
 
     public Object readResolve() {

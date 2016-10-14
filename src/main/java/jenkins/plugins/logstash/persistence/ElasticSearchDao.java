@@ -61,7 +61,7 @@ import org.apache.http.protocol.HTTP;
  * @since 1.0.4
  */
 public class ElasticSearchDao extends AbstractLogstashIndexerDao {
-  final HttpClientBuilder clientBuilder;
+  transient HttpClientBuilder clientBuilder;
   final URI uri;
   final String auth;
 
@@ -98,7 +98,14 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
       auth = null;
     }
 
-    clientBuilder = factory == null ? HttpClientBuilder.create() : factory;
+    clientBuilder = factory;
+  }
+
+  HttpClientBuilder clientBuilder() {
+      if (clientBuilder == null) {
+          clientBuilder = HttpClientBuilder.create();
+      }
+      return clientBuilder;
   }
 
   HttpPost getHttpPost(String data) {
@@ -119,7 +126,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
     HttpPost post = getHttpPost(data);
 
     try {
-      httpClient = clientBuilder.build();
+      httpClient = clientBuilder().build();
       response = httpClient.execute(post);
 
       if (response.getStatusLine().getStatusCode() != 201) {
@@ -153,6 +160,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
             "        { \"match\": { \"data.buildNum\": \"" + run.getNumber() + "\" }}  \n" +
             "      ],\n" +
             "      \"filter\": [ \n" +
+            // TODO this is too little
             "        { \"range\": { \"@timestamp\": { \"gte\": \"" + (run.getStartTimeInMillis()-100000) + "\" }}}\n" +
             "      ]\n" +
             "    }\n" +
@@ -169,7 +177,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
         }
         
         try {
-            httpClient = clientBuilder.build();
+            httpClient = clientBuilder().build();
             response = httpClient.execute(getRequest);
 
             if (response.getStatusLine().getStatusCode() != 200) {
@@ -189,6 +197,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
                 JSONObject hit = jsonArray.getJSONObject(i);
                 String timestamp = hit.getJSONObject("fields").getJSONArray("@timestamp").getString(0);
                 String message = hit.getJSONObject("fields").getJSONArray("message").getString(0);
+                // TODO seems to deliver messages out of order, and missing entries
                 res.add(timestamp + " > " +message);
             }
             return res;
