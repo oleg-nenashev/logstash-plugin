@@ -26,6 +26,8 @@ package jenkins.plugins.logstash.persistence;
 
 import hudson.model.Run;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +43,9 @@ import net.sf.json.JSONObject;
  * @since 1.0.0
  */
 abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
+
+  private static volatile String localhost;
+
   protected final String host;
   protected final int port;
   protected final String key;
@@ -66,6 +71,14 @@ abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
     payload.put("message", logLines);
     payload.put("source", "jenkins");
     payload.put("source_host", jenkinsUrl);
+    if (localhost == null) {
+      try {
+        localhost = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException x) {
+        localhost = "?";
+      }
+    }
+    payload.put("sender", localhost);
     payload.put("@buildTimestamp", buildData.getTimestamp());
     payload.put("@timestamp", BuildData.DATE_FORMATTER.format(Calendar.getInstance().getTime()));
     payload.put("@version", 1);
