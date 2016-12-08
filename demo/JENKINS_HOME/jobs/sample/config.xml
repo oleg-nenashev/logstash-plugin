@@ -1,5 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@2.10-SNAPSHOT">
+  <actions/>
   <description></description>
   <keepDependencies>false</keepDependencies>
   <properties>
@@ -9,7 +10,9 @@
   </properties>
   <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.23">
     <script>node(&apos;remote&apos;) {
-  sh &apos;echo hello world&apos;
+  withCredentials([string(credentialsId: &apos;token&apos;, variable: &apos;TOKEN&apos;)]) {
+    sh &apos;echo receiving $TOKEN&apos;
+  }
 }</script>
     <sandbox>true</sandbox>
   </definition>

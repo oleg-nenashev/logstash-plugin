@@ -9,7 +9,7 @@ ADD https://jitpack.io/com/github/jglick/workflow-api-plugin/99f1c51/workflow-ap
 ADD https://jitpack.io/com/github/jglick/workflow-support-plugin/cf6f11f/workflow-support-plugin-cf6f11f.hpi /usr/share/jenkins/ref/plugins/workflow-support.jpi
 ADD https://jitpack.io/com/github/jglick/workflow-job-plugin/211bd14/workflow-job-plugin-211bd14.hpi /usr/share/jenkins/ref/plugins/workflow-job.jpi
 ADD https://jitpack.io/com/github/jglick/workflow-durable-task-step-plugin/940d360/workflow-durable-task-step-plugin-940d360.hpi /usr/share/jenkins/ref/plugins/workflow-durable-task-step.jpi
-ADD https://jitpack.io/com/github/jglick/logstash-plugin/fcb709f/logstash-plugin-fcb709f.hpi /usr/share/jenkins/ref/plugins/logstash.jpi
+ADD https://jitpack.io/com/github/jglick/logstash-plugin/e168c03/logstash-plugin-e168c03.hpi /usr/share/jenkins/ref/plugins/logstash.jpi
 
 ADD JENKINS_HOME /usr/share/jenkins/ref/
 
