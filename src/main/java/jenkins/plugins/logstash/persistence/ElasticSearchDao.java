@@ -154,15 +154,12 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
         // Prepare query
         String query = "{\n" +
             "  \"fields\": [\"message\",\"@timestamp\"], \n" +
+            "  \"size\": 9999, \n" + // TODO use paging https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-from-size.html
             "  \"query\": { \n" +
             "    \"bool\": { \n" +
             "      \"must\": [\n" +
             "        { \"match\": { \"data.jobId\":   \"" + jobId + "\"}}, \n" +
             "        { \"match\": { \"data.buildNum\": \"" + run.getNumber() + "\" }}  \n" +
-            "      ],\n" +
-            "      \"filter\": [ \n" +
-            // TODO this is too little
-            "        { \"range\": { \"@timestamp\": { \"gte\": \"" + (run.getStartTimeInMillis()-100000) + "\" }}}\n" +
             "      ]\n" +
             "    }\n" +
             "  }\n" +
