@@ -72,7 +72,7 @@ public class BuildData implements Serializable {
     private static final Logger LOGGER = Logger.getLogger(BuildData.class.getName());
     
   // ISO 8601 date format
-  public transient static final DateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+  public transient static final DateFormat DATE_FORMATTER = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
   private static final long serialVersionUID = 1L;
 
   public static class TestData {

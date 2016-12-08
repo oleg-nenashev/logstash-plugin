@@ -44,6 +44,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import jenkins.plugins.logstash.util.UniqueIdHelper;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
@@ -197,9 +198,9 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
                 JSONObject hit = jsonArray.getJSONObject(i);
                 String timestamp = hit.getJSONObject("fields").getJSONArray("@timestamp").getString(0);
                 String message = hit.getJSONObject("fields").getJSONArray("message").getString(0);
-                // TODO seems to deliver messages out of order, and missing entries
                 res.add(timestamp + " > " +message);
             }
+            Collections.sort(res);
             return res;
             
         } finally {
