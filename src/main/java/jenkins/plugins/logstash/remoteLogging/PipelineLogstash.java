@@ -65,7 +65,7 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Collection<String> pulledLogs = dao.pullLogs(b, 0, Long.MAX_VALUE);
         for (String logEntry : pulledLogs) {
-            byte[] bytes = logEntry.replaceFirst("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}-\\d{4} > ", "").getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = logEntry.replaceFirst("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{4} > ", "").getBytes(StandardCharsets.UTF_8);
             baos.write(bytes, 0, bytes.length);
             baos.write('\n');
         }
