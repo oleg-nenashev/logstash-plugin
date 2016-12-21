@@ -130,13 +130,13 @@
     <dependency>
       <groupId>com.github.jglick</groupId> <!-- TODO pending https://github.com/jenkinsci/workflow-job-plugin/pull/27 -->
       <artifactId>workflow-job-plugin</artifactId>
-      <version>211bd14</version>
+      <version>2de9add</version>
     </dependency>
     <!-- For testing of Log wrapping in Pipeline -->
     <dependency>
       <groupId>com.github.jglick</groupId> <!-- TODO pending https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/21 -->
       <artifactId>workflow-durable-task-step-plugin</artifactId>
-      <version>940d360</version>
+      <version>363bafa</version>
       <scope>test</scope>
     </dependency>
     <dependency>

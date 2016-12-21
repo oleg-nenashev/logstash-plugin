@@ -24,6 +24,7 @@
 
 package jenkins.plugins.logstash.remoteLogging;
 
+import com.google.common.primitives.Ints;
 import hudson.Extension;
 import hudson.console.LineTransformationOutputStream;
 import hudson.model.BuildListener;
@@ -52,7 +53,7 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
         return new PipelineListener(b);
     }
 
-    @Override protected InputStream logFor(WorkflowRun b) throws IOException {
+    @Override protected InputStream logFor(WorkflowRun b, long start) throws IOException {
         LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
         IndexerDaoFactory.Info info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
         final LogstashIndexerDao dao;
@@ -70,7 +71,8 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
             baos.write(bytes, 0, bytes.length);
             baos.write('\n');
         }
-        return new ByteArrayInputStream(baos.toByteArray());
+        int _start = Ints.checkedCast(start); // this implementation is not streaming anyway
+        return new ByteArrayInputStream(baos.toByteArray(), _start, baos.size() - _start);
     }
 
     private static class PipelineListener extends LessAbstractTaskListener implements BuildListener {
