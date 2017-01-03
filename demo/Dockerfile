@@ -4,6 +4,7 @@ COPY plugins.txt /plugins.txt
 RUN /usr/local/bin/plugins.sh /plugins.txt
 
 # See PR links from https://issues.jenkins-ci.org/browse/JENKINS-38381
+# TODO replace with Maven snapshot URLs
 ADD https://jitpack.io/com/github/jglick/durable-task-plugin/8f11c53/durable-task-plugin-8f11c53.hpi /usr/share/jenkins/ref/plugins/durable-task.jpi 
 ADD https://jitpack.io/com/github/jglick/workflow-api-plugin/ea218b9/workflow-api-plugin-ea218b9.hpi /usr/share/jenkins/ref/plugins/workflow-api.jpi
 ADD https://jitpack.io/com/github/jglick/workflow-support-plugin/284f0dc/workflow-support-plugin-284f0dc.hpi /usr/share/jenkins/ref/plugins/workflow-support.jpi
