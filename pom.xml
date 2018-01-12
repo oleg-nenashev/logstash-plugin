@@ -1,7 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-
+  
+  <properties>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <skipIntegrationTests>true</skipIntegrationTests>
+    <java.level>7</java.level>
+    <jenkins.version>1.608</jenkins.version>
+  </properties>
+  
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
@@ -16,21 +23,21 @@
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
 
   <pluginRepositories>
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
 
   <scm>
     <connection>scm:git:git://github.com/jenkinsci/logstash-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/logstash-plugin.git</developerConnection>
-    <url>http://github.com/jenkinsci/logstash-plugin</url>
+    <url>https://github.com/jenkinsci/logstash-plugin</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -49,10 +56,10 @@
 
   <artifactId>logstash</artifactId>
   <packaging>hpi</packaging>
-  <version>1.2.1-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
   <name>Logstash</name>
   <description>A Logstash agent to send Jenkins logs to a Logstash indexer.</description>
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/Logstash+Plugin</url>
+  <url>https://wiki.jenkins-ci.org/display/JENKINS/Logstash+Plugin</url>
 
   <dependencies>
     <dependency>
@@ -65,8 +72,6 @@
       <groupId>redis.clients</groupId>
       <artifactId>jedis</artifactId>
       <version>2.6.0</version>
-      <type>jar</type>
-      <scope>compile</scope>
     </dependency>
 
     <dependency>
@@ -87,8 +92,15 @@
 
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <version>1.9.5</version>
+      <artifactId>mockito-core</artifactId>
+      <version>2.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>3.0.0</version>
       <type>jar</type>
       <scope>test</scope>
     </dependency>
@@ -112,6 +124,24 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
       <version>1.10</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>structs</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.powermock</groupId>
+    	<artifactId>powermock-api-mockito2</artifactId>
+    	<version>2.0.0-beta.5</version>
+    	<scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>org.powermock</groupId>
+    	<artifactId>powermock-module-junit4</artifactId>
+    	<version>2.0.0-beta.5</version>
+    	<scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -148,9 +178,26 @@
           </dependency>
         </dependencies>
       </plugin>
-    </plugins>
+ 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>2.20</version>
+        <configuration>
+          <skipITs>${skipIntegrationTests}</skipITs>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins> 
   </build>
-
+  
   <developers>
     <developer>
       <id>jesusaurus</id>
@@ -161,6 +208,11 @@
       <id>rgerard</id>
       <name>Rusty Gerard</name>
       <email>rusty.gerard@gmail.com</email>
+    </developer>
+    <developer>
+      <id>jbochenski</id>
+      <name>Jakub Bocheński</name>
+      <email>kuba.bochenski+logstash-plugin@gmail.com</email>
     </developer>
   </developers>
 

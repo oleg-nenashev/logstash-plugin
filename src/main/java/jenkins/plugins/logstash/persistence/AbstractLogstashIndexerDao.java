@@ -24,6 +24,7 @@
 
 package jenkins.plugins.logstash.persistence;
 
+import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.List;
 
@@ -37,14 +38,15 @@ import net.sf.json.JSONObject;
  * @author Rusty Gerard
  * @since 1.0.0
  */
-abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
+public abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
   protected final String host;
   protected final int port;
   protected final String key;
   protected final String username;
   protected final String password;
+  private Charset charset;
 
-  AbstractLogstashIndexerDao(String host, int port, String key, String username, String password) {
+  public AbstractLogstashIndexerDao(String host, int port, String key, String username, String password) {
     this.host = host;
     this.port = port;
     this.key = key;
@@ -56,6 +58,27 @@ abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
     }
   }
 
+  /**
+   * Sets the charset used to push data to the indexer
+   *
+   *@param charset The charset to push data
+   */
+  @Override
+  public void setCharset(Charset charset)
+  {
+    this.charset = charset;
+  }
+
+  /**
+   * Gets the configured charset used to push data to the indexer
+   *
+   * @return charste to push data
+   */
+  public Charset getCharset()
+  {
+    return charset;
+  }
+
   @Override
   public JSONObject buildPayload(BuildData buildData, String jenkinsUrl, List<String> logLines) {
     JSONObject payload = new JSONObject();
@@ -64,7 +87,7 @@ abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
     payload.put("source", "jenkins");
     payload.put("source_host", jenkinsUrl);
     payload.put("@buildTimestamp", buildData.getTimestamp());
-    payload.put("@timestamp", BuildData.DATE_FORMATTER.format(Calendar.getInstance().getTime()));
+    payload.put("@timestamp", BuildData.getDateFormatter().format(Calendar.getInstance().getTime()));
     payload.put("@version", 1);
 
     return payload;

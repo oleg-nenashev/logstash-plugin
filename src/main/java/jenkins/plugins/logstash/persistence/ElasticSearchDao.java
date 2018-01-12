@@ -24,6 +24,8 @@
 
 package jenkins.plugins.logstash.persistence;
 
+import static com.google.common.collect.Ranges.closedOpen;
+
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
@@ -38,8 +40,13 @@ import org.apache.http.client.utils.URIBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
+import com.google.common.collect.Range;
 
 /**
  * Elastic Search Data Access Object.
@@ -48,9 +55,10 @@ import java.net.URISyntaxException;
  * @since 1.0.4
  */
 public class ElasticSearchDao extends AbstractLogstashIndexerDao {
-  final HttpClientBuilder clientBuilder;
-  final URI uri;
-  final String auth;
+  private final HttpClientBuilder clientBuilder;
+  private final URI uri;
+  private final String auth;
+  private final Range<Integer> successCodes = closedOpen(200,300);
 
   //primary constructor used by indexer factory
   public ElasticSearchDao(String host, int port, String key, String username, String password) {
@@ -80,12 +88,24 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
     }
 
     if (StringUtils.isNotBlank(username)) {
-      auth = Base64.encodeBase64String((username + ":" + StringUtils.defaultString(password)).getBytes());
+      auth = Base64.encodeBase64String((username + ":" + StringUtils.defaultString(password)).getBytes(StandardCharsets.UTF_8));
     } else {
       auth = null;
     }
 
     clientBuilder = factory == null ? HttpClientBuilder.create() : factory;
+  }
+
+  // for testing only
+  String getAuth()
+  {
+    return auth;
+  }
+
+  //for testing only
+  URI getUri()
+  {
+    return uri;
   }
 
   HttpPost getHttpPost(String data) {
@@ -109,7 +129,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
       httpClient = clientBuilder.build();
       response = httpClient.execute(post);
 
-      if (response.getStatusLine().getStatusCode() != 201) {
+      if (!successCodes.contains(response.getStatusLine().getStatusCode())) {
         throw new IOException(this.getErrorMessage(response));
       }
     } finally {
@@ -127,7 +147,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
     PrintStream stream = null;
     try {
       byteStream = new ByteArrayOutputStream();
-      stream = new PrintStream(byteStream);
+      stream = new PrintStream(byteStream, true, StandardCharsets.UTF_8.name());
 
       try {
         stream.print("HTTP error code: ");
@@ -140,7 +160,11 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
         stream.println(ExceptionUtils.getStackTrace(e));
       }
       stream.flush();
-      return byteStream.toString();
+      return byteStream.toString(StandardCharsets.UTF_8.name());
+    }
+    catch (UnsupportedEncodingException e)
+    {
+      return ExceptionUtils.getStackTrace(e);
     } finally {
       if (stream != null) {
         stream.close();

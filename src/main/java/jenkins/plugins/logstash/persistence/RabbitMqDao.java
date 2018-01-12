@@ -39,7 +39,7 @@ import com.rabbitmq.client.ConnectionFactory;
  * @since 1.0.0
  */
 public class RabbitMqDao extends AbstractLogstashIndexerDao {
-  final ConnectionFactory pool;
+  private final ConnectionFactory pool;
 
   //primary constructor used by indexer factory
   public RabbitMqDao(String host, int port, String key, String username, String password) {
@@ -87,7 +87,7 @@ public class RabbitMqDao extends AbstractLogstashIndexerDao {
         channel.queueDeclare(key, true, false, false, null);
       }
 
-      channel.basicPublish("", key, null, data.getBytes());
+      channel.basicPublish("", key, null, data.getBytes(getCharset()));
     } finally {
       finalizeChannel(channel);
       finalizeConnection(connection);
