@@ -79,9 +79,10 @@ public class LogstashConfiguration extends GlobalConfiguration
 
   @SuppressWarnings("deprecation")
   @Initializer(after = InitMilestone.JOB_LOADED)
-  public void migrateData()
+  public static void migrateData()
   {
-    if (!dataMigrated)
+    LogstashConfiguration c = LogstashConfiguration.getInstance();
+    if (!c.dataMigrated)
     {
       Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
       if (descriptor.getType() != null)
@@ -96,7 +97,7 @@ public class LogstashConfiguration extends GlobalConfiguration
             redis.setPort(descriptor.getPort());
             redis.setKey(descriptor.getKey());
             redis.setPassword(descriptor.getPassword());
-            logstashIndexer = redis;
+            c.logstashIndexer = redis;
             break;
           case ELASTICSEARCH:
             LOGGER.log(Level.INFO, "Migrating logstash configuration for Elastic Search");
@@ -110,7 +111,7 @@ public class LogstashConfiguration extends GlobalConfiguration
               es.setUri(uri);
               es.setUsername(descriptor.getUsername());
               es.setPassword(descriptor.getPassword());
-              logstashIndexer = es;
+              c.logstashIndexer = es;
             }
             catch (URISyntaxException e)
             {
@@ -125,7 +126,7 @@ public class LogstashConfiguration extends GlobalConfiguration
             rabbitMq.setQueue(descriptor.getKey());
             rabbitMq.setUsername(descriptor.getUsername());
             rabbitMq.setPassword(descriptor.getPassword());
-            logstashIndexer = rabbitMq;
+            c.logstashIndexer = rabbitMq;
             break;
           case SYSLOG:
             LOGGER.log(Level.INFO, "Migrating logstash configuration for  SYSLOG");
@@ -145,16 +146,16 @@ public class LogstashConfiguration extends GlobalConfiguration
                 syslog.setMessageFormat(MessageFormat.RFC_3164);
                 break;
             }
-            logstashIndexer = syslog;
+            c.logstashIndexer = syslog;
             break;
           default:
             LOGGER.log(Level.INFO, "unknown logstash Indexer type: " + type);
             break;
         }
-        activeIndexer = logstashIndexer;
+        c.activeIndexer = c.logstashIndexer;
       }
-      dataMigrated = true;
-      save();
+      c.dataMigrated = true;
+      c.save();
     }
   }
 
