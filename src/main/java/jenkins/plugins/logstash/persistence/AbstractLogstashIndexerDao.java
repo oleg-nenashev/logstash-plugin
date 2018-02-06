@@ -28,6 +28,7 @@ import hudson.model.Run;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.List;
@@ -39,29 +40,35 @@ import net.sf.json.JSONObject;
 /**
  * Abstract data access object for Logstash indexers.
  *
+ * TODO: a charset is only required for RabbitMq currently (ES as well but there it is currently configured via the ContentType),
+ *   so better move this to the corresponding classes.
  * @author Rusty Gerard
  * @since 1.0.0
  */
-abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
-
+public abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
   private static volatile String localhost;
 
-  protected final String host;
-  protected final int port;
-  protected final String key;
-  protected final String username;
-  protected final String password;
+  private Charset charset;
 
-  AbstractLogstashIndexerDao(String host, int port, String key, String username, String password) {
-    this.host = host;
-    this.port = port;
-    this.key = key;
-    this.username = username;
-    this.password = password;
+  /**
+   * Sets the charset used to push data to the indexer
+   *
+   *@param charset The charset to push data
+   */
+  @Override
+  public void setCharset(Charset charset)
+  {
+    this.charset = charset;
+  }
 
-    if (StringUtils.isBlank(host)) {
-      throw new IllegalArgumentException("host name is required");
-    }
+  /**
+   * Gets the configured charset used to push data to the indexer
+   *
+   * @return charste to push data
+   */
+  public Charset getCharset()
+  {
+    return charset;
   }
 
   @Override
@@ -80,15 +87,10 @@ abstract class AbstractLogstashIndexerDao implements LogstashIndexerDao {
     }
     payload.put("sender", localhost);
     payload.put("@buildTimestamp", buildData.getTimestamp());
-    payload.put("@timestamp", BuildData.DATE_FORMATTER.format(Calendar.getInstance().getTime()));
+    payload.put("@timestamp", BuildData.getDateFormatter().format(Calendar.getInstance().getTime()));
     payload.put("@version", 1);
 
     return payload;
-  }
-
-  @Override
-  public String getDescription() {
-    return this.host + ":" + this.port;
   }
 
    @Override

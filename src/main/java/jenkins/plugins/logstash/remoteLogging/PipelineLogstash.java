@@ -37,8 +37,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import jenkins.model.Jenkins;
-import jenkins.plugins.logstash.LogstashInstallation;
-import jenkins.plugins.logstash.persistence.IndexerDaoFactory;
+import jenkins.plugins.logstash.LogstashConfiguration;
 import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.job.console.PipelineLogFile;
@@ -50,18 +49,11 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
 @Extension public class PipelineLogstash extends PipelineLogFile {
 
     @Override protected BuildListener listenerFor(WorkflowRun b) throws IOException, InterruptedException {
-        return new PipelineListener(b);
+        return new PipelineListener(b, LogstashConfiguration.getInstance().getIndexerInstance());
     }
 
     @Override protected InputStream logFor(WorkflowRun b, long start) throws IOException {
-        LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
-        IndexerDaoFactory.Info info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
-        final LogstashIndexerDao dao;
-        try {
-            dao = IndexerDaoFactory.getInstance(info);
-        } catch (InstantiationException ex) {
-            throw new IOException("Cannot retrieve Logstash destination Dao", ex);
-        }
+        LogstashIndexerDao dao = LogstashConfiguration.getInstance().getIndexerInstance();
         // TODO very inefficient
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Collection<String> pulledLogs = dao.pullLogs(b, 0, Long.MAX_VALUE);
@@ -82,8 +74,8 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
         private final RemoteLogstashWriter writer;
         private transient PrintStream logger;
 
-        PipelineListener(WorkflowRun b) {
-            writer = new RemoteLogstashWriter(b, Jenkins.getInstance());
+        PipelineListener(WorkflowRun b, LogstashIndexerDao dao) {
+            writer = new RemoteLogstashWriter(b, Jenkins.getInstance(), this, dao);
         }
 
         @Override public PrintStream getLogger() {

@@ -24,8 +24,6 @@
 
 package jenkins.plugins.logstash;
 
-import jenkins.plugins.logstash.remoteLogging.RemoteLogstashWriter;
-import jenkins.plugins.logstash.remoteLogging.RemoteLogstashOutputStream;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.BuildListener;
@@ -45,25 +43,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper.VarPasswordPair;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsConfig;
-import hudson.CloseProofOutputStream;
 import hudson.EnvVars;
 import hudson.FilePath;
-import hudson.Proc;
-import hudson.console.ConsoleLogFilter;
-import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.remoting.Channel;
-import hudson.remoting.RemoteInputStream;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.Serializable;
-import jenkins.model.Jenkins;
-import jenkins.security.MasterToSlaveCallable;
 import jenkins.tasks.SimpleBuildWrapper;
-import org.apache.commons.io.input.NullInputStream;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 /**
  * Build wrapper that decorates the build's logger to insert a
@@ -85,7 +69,8 @@ public class LogstashBuildWrapper extends SimpleBuildWrapper {
             throws IOException, InterruptedException {
         // Do nothing
     }
-  
+
+  @Override
   public DescriptorImpl getDescriptor() {
     return (DescriptorImpl) super.getDescriptor();
   }
