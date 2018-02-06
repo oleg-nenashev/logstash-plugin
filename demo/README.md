@@ -1,6 +1,6 @@
 To run this demo:
 
-1. `docker-compose rm -fv && docker-compose up --build --force-recreate jenkins elk`
+1. `make run`
 1. when that is started enough, `docker-compose up -d agent`
 1. go to http://localhost:8080/job/sample/
 1. **Build Now**
