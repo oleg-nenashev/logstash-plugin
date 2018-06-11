@@ -1,4 +1,4 @@
-FROM jenkinsci/jenkins:2.89.3
+FROM jenkinsci/jenkins:2.121.1
 
 ADD JENKINS_HOME /usr/share/jenkins/ref/
 

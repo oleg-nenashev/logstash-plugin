@@ -41,7 +41,6 @@ import jenkins.plugins.logstash.LogstashConfiguration;
 import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.job.console.PipelineLogFile;
-import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
 
 /**
  * Integrates remote logging with Pipeline builds using an experimental API.
@@ -67,7 +66,7 @@ import org.jenkinsci.plugins.workflow.support.actions.LessAbstractTaskListener;
         return new ByteArrayInputStream(baos.toByteArray(), _start, baos.size() - _start);
     }
 
-    private static class PipelineListener extends LessAbstractTaskListener implements BuildListener {
+    private static class PipelineListener implements BuildListener {
 
         private static final long serialVersionUID = 1;
 

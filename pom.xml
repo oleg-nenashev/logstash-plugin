@@ -7,9 +7,8 @@
     <changelist>-SNAPSHOT</changelist>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <skipIntegrationTests>true</skipIntegrationTests>
-    <jenkins-test-harness.version>2.23</jenkins-test-harness.version>
     <java.level>8</java.level>
-    <jenkins.version>2.62</jenkins.version>
+    <jenkins.version>2.121.1</jenkins.version>
     <useBeta>true</useBeta>
   </properties>
   

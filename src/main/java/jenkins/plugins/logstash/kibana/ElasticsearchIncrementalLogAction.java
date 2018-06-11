@@ -12,7 +12,6 @@ import hudson.console.ConsoleAnnotationOutputStream;
 import hudson.console.ConsoleAnnotator;
 import hudson.model.Run;
 import hudson.remoting.ObjectInputStreamEx;
-import hudson.util.TimeUnit2;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +21,7 @@ import static java.lang.Math.abs;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
 import javax.crypto.CipherInputStream;
@@ -179,7 +179,7 @@ public class ElasticsearchIncrementalLogAction extends AbstractConsoleAction {
                         Jenkins.getInstance().pluginManager.uberClassLoader);
                 try {
                     long timestamp = ois.readLong();
-                    if (TimeUnit2.HOURS.toMillis(1) > abs(System.currentTimeMillis()-timestamp))
+                    if (TimeUnit.HOURS.toMillis(1) > abs(System.currentTimeMillis()-timestamp))
                         // don't deserialize something too old to prevent a replay attack
                         return (ConsoleAnnotator)ois.readObject();
                 } finally {
