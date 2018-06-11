@@ -135,13 +135,18 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
-      <version>2.22-rc300.4c8c8ab531e3</version> <!-- TODO https://github.com/jenkinsci/workflow-job-plugin/pull/27 -->
+      <version>2.22-rc303.18d78f305a45</version> <!-- TODO https://github.com/jenkinsci/workflow-job-plugin/pull/27 -->
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins.workflow</groupId>
+      <artifactId>workflow-support</artifactId>
+      <version>2.19-rc257.cd70bcc4c209</version> <!-- TODO https://github.com/jenkinsci/workflow-support-plugin/pull/15 -->
     </dependency>
     <!-- For testing of Log wrapping in Pipeline -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-durable-task-step</artifactId>
-      <version>2.20-rc330.cf9703d1e91c</version> <!-- TODO https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/21 -->
+      <version>2.20-rc333.74dc7c303e6d</version> <!-- TODO https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/21 -->
       <scope>test</scope>
     </dependency>
     <dependency>
