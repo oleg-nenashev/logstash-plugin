@@ -3,17 +3,20 @@
   <modelVersion>4.0.0</modelVersion>
   
   <properties>
+    <revision>2.0.0</revision>
+    <changelist>-SNAPSHOT</changelist>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <skipIntegrationTests>true</skipIntegrationTests>
     <jenkins-test-harness.version>2.23</jenkins-test-harness.version>
     <java.level>8</java.level>
     <jenkins.version>2.62</jenkins.version>
+    <useBeta>true</useBeta>
   </properties>
   
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>2.19</version>
+    <version>3.14</version>
     <relativePath/>
   </parent>
   
@@ -35,7 +38,7 @@
     <connection>scm:git:git://github.com/jenkinsci/logstash-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/logstash-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/logstash-plugin</url>
-    <tag>HEAD</tag>
+    <tag>${scmTag}</tag>
   </scm>
 
   <distributionManagement>
@@ -53,7 +56,7 @@
 
   <artifactId>logstash</artifactId>
   <packaging>hpi</packaging>
-  <version>2.0.0-SNAPSHOT</version>
+  <version>${revision}${changelist}</version>
   <name>Logstash</name>
   <description>A Logstash agent to send Jenkins logs to a Logstash indexer.</description>
   <url>https://plugins.jenkins.io/logstash</url>
@@ -133,13 +136,13 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-job</artifactId>
-      <version>2.18-SNAPSHOT</version> <!-- TODO pending https://github.com/jenkinsci/workflow-job-plugin/pull/27 -->
+      <version>2.22-rc300.4c8c8ab531e3</version> <!-- TODO https://github.com/jenkinsci/workflow-job-plugin/pull/27 -->
     </dependency>
     <!-- For testing of Log wrapping in Pipeline -->
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-durable-task-step</artifactId>
-      <version>2.19-SNAPSHOT</version> <!-- TODO pending https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/21 -->
+      <version>2.20-rc330.cf9703d1e91c</version> <!-- TODO https://github.com/jenkinsci/workflow-durable-task-step-plugin/pull/21 -->
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -164,7 +167,7 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>structs</artifactId>
-      <version>1.10</version>
+      <version>1.14</version>
     </dependency>
     <dependency>
     	<groupId>org.powermock</groupId>
