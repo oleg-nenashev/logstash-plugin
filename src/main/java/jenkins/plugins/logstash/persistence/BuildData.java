@@ -34,6 +34,7 @@ import hudson.model.Run;
 import hudson.model.Node;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.TestResult;
+import jenkins.plugins.logstash.LogstashConfiguration;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -51,7 +52,6 @@ import java.lang.invoke.MethodHandles;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.time.FastDateFormat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -64,7 +64,6 @@ import com.google.gson.GsonBuilder;
  */
 public class BuildData {
   // ISO 8601 date format
-  private transient static final FastDateFormat DATE_FORMATTER = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ssZ");
   private final static Logger LOGGER = Logger.getLogger(MethodHandles.lookup().lookupClass().getCanonicalName());
   public static class TestData {
     private int totalCount, skipCount, failCount, passCount;
@@ -164,6 +163,7 @@ public class BuildData {
   private int buildNum;
   private long buildDuration;
   private transient String timestamp; // This belongs in the root object
+  private transient Run<?, ?> build;
   private String rootProjectName;
   private String rootFullProjectName;
   private String rootProjectDisplayName;
@@ -231,6 +231,7 @@ public class BuildData {
 
   private void initData(Run<?, ?> build, Date currentTime) {
 
+    this.build = build;
     Executor executor = build.getExecutor();
     if (executor == null) {
         buildHost = "master";
@@ -246,8 +247,6 @@ public class BuildData {
         }
     }
 
-    Result result = build.getResult();
-    this.result = result == null ? null : result.toString();
     id = build.getId();
     projectName = build.getParent().getName();
     fullProjectName = build.getParent().getFullName();
@@ -256,14 +255,22 @@ public class BuildData {
     description = build.getDescription();
     url = build.getUrl();
     buildNum = build.getNumber();
+    buildDuration = currentTime.getTime() - build.getStartTimeInMillis();
+    timestamp = LogstashConfiguration.getInstance().getDateFormatter().format(build.getTimestamp().getTime());
+    updateResult();
+  }
 
+  public void updateResult()
+  {
+    if (result == null && build.getResult() != null)
+    {
+      Result result = build.getResult();
+      this.result = result == null ? null : result.toString();
+    }
     Action testResultAction = build.getAction(AbstractTestResultAction.class);
-    if (testResultAction != null) {
+    if (testResults == null && testResultAction != null) {
       testResults = new TestData(testResultAction);
     }
-
-    buildDuration = currentTime.getTime() - build.getStartTimeInMillis();
-    timestamp = DATE_FORMATTER.format(build.getTimestamp().getTime());
   }
 
   @Override
@@ -378,7 +385,7 @@ public class BuildData {
   }
 
   public void setTimestamp(Calendar timestamp) {
-    this.timestamp = DATE_FORMATTER.format(timestamp.getTime());
+    this.timestamp = LogstashConfiguration.getInstance().getDateFormatter().format(timestamp.getTime());
   }
 
   public String getRootProjectName() {
@@ -435,10 +442,5 @@ public class BuildData {
 
   public void setTestResults(TestData testResults) {
     this.testResults = testResults;
-  }
-
-  public static FastDateFormat getDateFormatter()
-  {
-    return DATE_FORMATTER;
   }
 }

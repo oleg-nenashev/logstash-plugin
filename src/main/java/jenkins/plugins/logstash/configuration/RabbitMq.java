@@ -1,6 +1,10 @@
 package jenkins.plugins.logstash.configuration;
 
+import java.nio.charset.Charset;
+
 import org.apache.commons.lang.StringUtils;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -17,10 +21,64 @@ public class RabbitMq extends HostBasedLogstashIndexer<RabbitMqDao>
   private String queue;
   private String username;
   private Secret password;
+  private String charset;
+  private String virtualHost;
 
   @DataBoundConstructor
-  public RabbitMq()
+  public RabbitMq(String charset)
   {
+    if (charset == null || charset.isEmpty())
+    {
+      this.charset = Charset.defaultCharset().toString();
+    }
+    else
+    {
+      this.charset = Charset.forName(charset).toString();
+    }
+  }
+
+  protected Object readResolve()
+  {
+    if (charset == null)
+    {
+      charset = Charset.defaultCharset().toString();
+    }
+    if (virtualHost == null)
+    {
+      virtualHost = "/";
+    }
+    return this;
+  }
+
+  public String getCharset()
+  {
+    return charset;
+  }
+
+  // package visibility for testing only
+  @Restricted(NoExternalUse.class)
+  Charset getEffectiveCharset()
+  {
+    try
+    {
+      return Charset.forName(charset);
+
+    }
+    catch (IllegalArgumentException e)
+    {
+      return Charset.defaultCharset();
+    }
+  }
+
+  public String getVirtualHost()
+  {
+    return virtualHost;
+  }
+
+  @DataBoundSetter
+  public void setVirtualHost(String virtualHost)
+  {
+    this.virtualHost = virtualHost;
   }
 
   public String getQueue()
@@ -70,24 +128,29 @@ public class RabbitMq extends HostBasedLogstashIndexer<RabbitMqDao>
     {
       return false;
     }
-    if (queue == null)
+    if (!StringUtils.equals(queue, other.queue))
     {
-      if (other.queue != null)
         return false;
     }
-    else if (!queue.equals(other.queue))
+    if (!StringUtils.equals(username, other.username))
+    {
+        return false;
+    }
+    if (!StringUtils.equals(virtualHost, other.virtualHost))
+    {
+        return false;
+    }
+    if (charset == null)
+    {
+      if (other.charset != null)
+      {
+        return false;
+      }
+    } else if (!charset.equals(other.charset))
     {
       return false;
     }
-    if (username == null)
-    {
-      if (other.username != null)
-        return false;
-    }
-    else if (!username.equals(other.username))
-    {
-      return false;
-    }
+
     return true;
   }
 
@@ -98,6 +161,8 @@ public class RabbitMq extends HostBasedLogstashIndexer<RabbitMqDao>
     int result = super.hashCode();
     result = prime * result + ((queue == null) ? 0 : queue.hashCode());
     result = prime * result + ((username == null) ? 0 : username.hashCode());
+    result = prime * result + ((charset == null) ? 0 : charset.hashCode());
+    result = prime * result + ((virtualHost == null) ? 0 : virtualHost.hashCode());
     result = prime * result + Secret.toString(password).hashCode();
     return result;
   }
@@ -105,7 +170,7 @@ public class RabbitMq extends HostBasedLogstashIndexer<RabbitMqDao>
   @Override
   public RabbitMqDao createIndexerInstance()
   {
-    return new RabbitMqDao(getHost(), getPort(), queue, username, Secret.toString(password));
+    return new RabbitMqDao(getHost(), getPort(), queue, username, Secret.toString(password), getEffectiveCharset(), getVirtualHost());
   }
 
   @Extension

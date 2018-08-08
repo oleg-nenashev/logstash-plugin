@@ -1,11 +1,12 @@
 package jenkins.plugins.logstash;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.text.MatchesPattern.matchesPattern;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertThat;
-import static org.powermock.api.mockito.PowerMockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,37 +16,33 @@ import org.jenkinsci.plugins.envinject.EnvInjectJobPropertyInfo;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.rules.ExpectedException;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsConfig;
 import com.michelin.cio.hudson.plugins.maskpasswords.MaskPasswordsBuildWrapper.VarPasswordPair;
 
+import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import hudson.model.Slave;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.plugins.ansicolor.AnsiColorBuildWrapper;
 import net.sf.json.JSONArray;
+import jenkins.plugins.logstash.configuration.MemoryIndexer;
 import jenkins.plugins.logstash.persistence.MemoryDao;
+import net.sf.json.JSONException;
 import net.sf.json.JSONObject;
 
-@RunWith(PowerMockRunner.class)
-@PowerMockIgnore({"javax.crypto.*"})
-@PrepareForTest(LogstashConfiguration.class)
 public class LogstashIntegrationTest
 {
     @Rule
     public JenkinsRule jenkins = new JenkinsRule();
 
-    @Mock
-    private LogstashConfiguration logstashConfiguration;
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     private Slave slave;
 
@@ -57,9 +54,10 @@ public class LogstashIntegrationTest
     public void setup() throws Exception
     {
         memoryDao = new MemoryDao();
-        PowerMockito.mockStatic(LogstashConfiguration.class);
-        when(LogstashConfiguration.getInstance()).thenReturn(logstashConfiguration);
-        when(logstashConfiguration.getIndexerInstance()).thenReturn(memoryDao);
+        LogstashConfiguration config = LogstashConfiguration.getInstance();
+        MemoryIndexer indexer = new MemoryIndexer(memoryDao);
+        config.setActiveIndexer(indexer);
+        config.setEnabled(true);
 
         slave = jenkins.createSlave();
         slave.setLabelString("myLabel");
@@ -67,9 +65,9 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void buildWrapperOnMaster() throws Exception
+    public void dataIsSetWhenEnabledViaJobPropertyOnMaster() throws Exception
     {
-        project.getBuildWrappersList().add(new LogstashBuildWrapper());
+        project.addProperty(new LogstashJobProperty());
         QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
         FreeStyleBuild build = f.get();
         assertThat(build.getResult(), equalTo(Result.SUCCESS));
@@ -84,9 +82,9 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void buildWrapperOnSlave() throws Exception
+    public void dataIsSetWhenEnabledViaJobPropertyOnSlave() throws Exception
     {
-        project.getBuildWrappersList().add(new LogstashBuildWrapper());
+        project.addProperty(new LogstashJobProperty());
         project.setAssignedNode(slave);
 
         QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
@@ -103,7 +101,7 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void buildNotifierOnMaster() throws Exception
+    public void dataIsSetForNotifierOnMaster() throws Exception
     {
         project.getPublishersList().add(new LogstashNotifier(10, false));
         QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
@@ -118,7 +116,7 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void buildNotifierOnSlave() throws Exception
+    public void dataIsSetForNotifierOnSlave() throws Exception
     {
         project.getPublishersList().add(new LogstashNotifier(10, false));
         project.setAssignedNode(slave);
@@ -134,35 +132,26 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void passwordsAreMaskedWithWrongOrderOfBuildWrappers() throws Exception
+    public void buildJobPropertyUpdatesResult() throws Exception
     {
-      EnvInjectJobPropertyInfo info = new EnvInjectJobPropertyInfo(null, "PWD=myPassword", null, null, false, null);
-      EnvInjectBuildWrapper e = new EnvInjectBuildWrapper(info);
-
-      List<VarPasswordPair> pwdPairs = new ArrayList<>();
-      VarPasswordPair pwdPair = new VarPasswordPair("PWD", "myPassword");
-      pwdPairs.add(pwdPair);
-      MaskPasswordsBuildWrapper maskPwdWrapper = new MaskPasswordsBuildWrapper(pwdPairs);
-
-      // Here the wrapper are in the wrong order, but it should still work
-      project.getBuildWrappersList().add(maskPwdWrapper);
-      project.getBuildWrappersList().add(e);
-      project.getBuildWrappersList().add(new LogstashBuildWrapper());
+      project.addProperty(new LogstashJobProperty());
       QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
-
       FreeStyleBuild build = f.get();
       assertThat(build.getResult(), equalTo(Result.SUCCESS));
       List<JSONObject> dataLines = memoryDao.getOutput();
-      for (JSONObject line: dataLines)
-      {
-        JSONArray message = line.getJSONArray("message");
-        String logline = (String) message.get(0);
-        assertThat(logline,not(containsString("myPassword")));
-      }
+      assertThat(dataLines.size(), is(4));
+      JSONObject firstLine = dataLines.get(0);
+      JSONObject lastLine = dataLines.get(dataLines.size()-1);
+      JSONObject data = firstLine.getJSONObject("data");
+      thrown.expect(JSONException.class);
+      thrown.expectMessage("JSONObject[\"result\"] not found.");
+      data.getString("result");
+      data = lastLine.getJSONObject("data");
+      assertThat(data.getString("result"),equalTo("SUCCESS"));
     }
 
     @Test
-    public void passwordsAreMaskedWithCorrectOrderOfBuildWrappers() throws Exception
+    public void passwordsAreMaskedWithMaskpasswordsBuildWrapper() throws Exception
     {
       EnvInjectJobPropertyInfo info = new EnvInjectJobPropertyInfo(null, "PWD=myPassword", null, null, false, null);
       EnvInjectBuildWrapper e = new EnvInjectBuildWrapper(info);
@@ -172,7 +161,7 @@ public class LogstashIntegrationTest
       pwdPairs.add(pwdPair);
       MaskPasswordsBuildWrapper maskPwdWrapper = new MaskPasswordsBuildWrapper(pwdPairs);
 
-      project.getBuildWrappersList().add(new LogstashBuildWrapper());
+      project.addProperty(new LogstashJobProperty());
       project.getBuildWrappersList().add(maskPwdWrapper);
       project.getBuildWrappersList().add(e);
       QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
@@ -189,7 +178,7 @@ public class LogstashIntegrationTest
     }
 
     @Test
-    public void passwordsAreMaskedWithoutMaskPasswordsBuildWrapper() throws Exception
+    public void passwordsAreMaskedWithGlobalMaskPasswordsConfiguration() throws Exception
     {
       MaskPasswordsConfig config = MaskPasswordsConfig.getInstance();
       config.setGlobalVarEnabledGlobally(true);
@@ -199,7 +188,7 @@ public class LogstashIntegrationTest
       EnvInjectBuildWrapper e = new EnvInjectBuildWrapper(info);
 
       project.getBuildWrappersList().add(e);
-      project.getBuildWrappersList().add(new LogstashBuildWrapper());
+      project.addProperty(new LogstashJobProperty());
       QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
 
       FreeStyleBuild build = f.get();
@@ -216,7 +205,7 @@ public class LogstashIntegrationTest
     @Test
     public void enableGlobally() throws Exception
     {
-      when(logstashConfiguration.isEnableGlobally()).thenReturn(true);
+      LogstashConfiguration.getInstance().setEnableGlobally(true);
       QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
 
       FreeStyleBuild build = f.get();
@@ -231,4 +220,68 @@ public class LogstashIntegrationTest
       assertThat(lastLine.getJSONArray("message").get(0).toString(),equalTo("Finished: SUCCESS"));
     }
 
+    @Test
+    public void milliSecondTimestamps() throws Exception
+    {
+
+      LogstashConfiguration.getInstance().setMilliSecondTimestamps(true);
+      project.addProperty(new LogstashJobProperty());
+      QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
+
+      FreeStyleBuild build = f.get();
+      assertThat(build.getResult(), equalTo(Result.SUCCESS));
+      List<JSONObject> dataLines = memoryDao.getOutput();
+      for (JSONObject line: dataLines)
+      {
+        String timestamp = line.getString("@timestamp");
+        assertThat(timestamp,matchesPattern("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}[+-]\\d{4}$"));
+      }
+    }
+
+    @Test
+    public void secondTimestamps() throws Exception
+    {
+      LogstashConfiguration.getInstance().setMilliSecondTimestamps(false);
+      project.addProperty(new LogstashJobProperty());
+      QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0);
+
+      FreeStyleBuild build = f.get();
+      assertThat(build.getResult(), equalTo(Result.SUCCESS));
+      List<JSONObject> dataLines = memoryDao.getOutput();
+      for (JSONObject line: dataLines)
+      {
+        String timestamp = line.getString("@timestamp");
+        assertThat(timestamp,matchesPattern("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}[+-]\\d{4}$"));
+      }
+    }
+
+    @Test
+    public void ansiColorAnnotationsAreNotIncluded() throws Exception
+    {
+      AnsiColorBuildWrapper ansi = new AnsiColorBuildWrapper("vga");
+      project.addProperty(new LogstashJobProperty());
+      project.getBuildWrappersList().add(ansi);
+      Cause cause = new Cause.UserIdCause();
+      QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0, cause);
+
+      FreeStyleBuild build = f.get();
+      assertThat(build.getResult(), equalTo(Result.SUCCESS));
+      List<JSONObject> dataLines = memoryDao.getOutput();
+      JSONObject firstLine = dataLines.get(0);
+      assertThat(firstLine.getJSONArray("message").get(0).toString(),not(startsWith("[8mha")));
+    }
+
+    @Test
+    public void disabledWillNotWrite() throws Exception
+    {
+      LogstashConfiguration.getInstance().setEnabled(false);
+      project.addProperty(new LogstashJobProperty());
+      Cause cause = new Cause.UserIdCause();
+      QueueTaskFuture<FreeStyleBuild> f = project.scheduleBuild2(0, cause);
+
+      FreeStyleBuild build = f.get();
+      assertThat(build.getResult(), equalTo(Result.SUCCESS));
+      List<JSONObject> dataLines = memoryDao.getOutput();
+      assertThat(dataLines.size(), equalTo(0));
+    }
 }

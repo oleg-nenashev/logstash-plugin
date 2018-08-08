@@ -44,12 +44,20 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 
 import com.google.common.collect.Range;
 
+import jenkins.plugins.logstash.utils.SSLHelper;
 import jenkins.plugins.logstash.configuration.ElasticSearch;
+
 
 /**
  * Elastic Search Data Access Object.
@@ -58,6 +66,7 @@ import jenkins.plugins.logstash.configuration.ElasticSearch;
  * @since 1.0.4
  */
 public class ElasticSearchDao extends AbstractLogstashIndexerDao {
+
   private final HttpClientBuilder clientBuilder;
   private final URI uri;
   private final String auth;
@@ -65,6 +74,8 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
 
   private String username;
   private String password;
+  private String mimeType;
+  private KeyStore customKeyStore;
 
   //primary constructor used by indexer factory
   public ElasticSearchDao(URI uri, String username, String password) {
@@ -102,11 +113,11 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
     clientBuilder = factory == null ? HttpClientBuilder.create() : factory;
   }
 
+
   public URI getUri()
   {
     return uri;
   }
-
   public String getHost()
   {
     return uri.getHost();
@@ -136,16 +147,37 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
   {
     return uri.getPath();
   }
+  
+  public String getMimeType() {
+    return this.mimeType;
+  }
+  
+  public void setMimeType(String mimeType) {
+    this.mimeType = mimeType;
+  }
+
+  public KeyStore getCustomKeyStore() {
+    return this.customKeyStore;
+  }
 
   String getAuth()
   {
     return auth;
   }
 
-  protected HttpPost getHttpPost(String data) {
-    HttpPost postRequest;
-    postRequest = new HttpPost(uri);
-    StringEntity input = new StringEntity(data, ContentType.APPLICATION_JSON);
+  public void setCustomKeyStore(KeyStore customKeyStore) throws
+          CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException, IOException {
+    SSLHelper.setClientBuilderSSLContext(this.clientBuilder, customKeyStore);
+    this.customKeyStore = customKeyStore;
+  }
+  
+  HttpPost getHttpPost(String data) {
+    HttpPost postRequest = new HttpPost(uri);
+    String mimeType = this.getMimeType();
+    // char encoding is set to UTF_8 since this request posts a JSON string
+    StringEntity input = new StringEntity(data, StandardCharsets.UTF_8);
+    mimeType = (mimeType != null) ? mimeType : ContentType.APPLICATION_JSON.toString();
+    input.setContentType(mimeType);
     postRequest.setEntity(input);
     if (auth != null) {
       postRequest.addHeader("Authorization", "Basic " + auth);
@@ -205,6 +237,7 @@ public class ElasticSearchDao extends AbstractLogstashIndexerDao {
       }
     }
   }
+
 
   @Override
   public String getDescription()

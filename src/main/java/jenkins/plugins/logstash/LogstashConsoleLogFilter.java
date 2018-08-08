@@ -3,17 +3,20 @@ package jenkins.plugins.logstash;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import hudson.Extension;
 import hudson.console.ConsoleLogFilter;
 import hudson.model.AbstractBuild;
-import hudson.model.BuildableItemWithBuildWrappers;
+import hudson.model.AbstractProject;
 import hudson.model.Run;
-import hudson.tasks.BuildWrapper;
 
 @Extension(ordinal = 1000)
 public class LogstashConsoleLogFilter extends ConsoleLogFilter implements Serializable
 {
+
+  private static Logger LOGGER = Logger.getLogger(LogstashConsoleLogFilter.class.getName());
 
   private transient Run<?, ?> run;
   public LogstashConsoleLogFilter() {};
@@ -27,6 +30,13 @@ public class LogstashConsoleLogFilter extends ConsoleLogFilter implements Serial
   @Override
   public OutputStream decorateLogger(Run build, OutputStream logger) throws IOException, InterruptedException
   {
+    LogstashConfiguration configuration = LogstashConfiguration.getInstance();
+    if (!configuration.isEnabled())
+    {
+      LOGGER.log(Level.FINE, "Logstash is disabled. Logs will not be forwarded.");
+      return logger;
+    }
+
     if (build != null && build instanceof AbstractBuild<?, ?>)
     {
       if (isLogstashEnabled(build))
@@ -63,15 +73,12 @@ public class LogstashConsoleLogFilter extends ConsoleLogFilter implements Serial
       return true;
     }
 
-    if (build.getParent() instanceof BuildableItemWithBuildWrappers)
+    if (build.getParent() instanceof AbstractProject)
     {
-      BuildableItemWithBuildWrappers project = (BuildableItemWithBuildWrappers)build.getParent();
-      for (BuildWrapper wrapper : project.getBuildWrappersList())
+      AbstractProject<?, ?> project = (AbstractProject<?, ?>)build.getParent();
+      if (project.getProperty(LogstashJobProperty.class) != null)
       {
-        if (wrapper instanceof LogstashBuildWrapper)
-        {
-          return true;
-        }
+        return true;
       }
     }
     return false;
