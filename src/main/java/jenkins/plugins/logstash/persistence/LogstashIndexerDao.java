@@ -26,7 +26,9 @@ package jenkins.plugins.logstash.persistence;
 
 import hudson.model.Run;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collection;
+import java.nio.charset.Charset;
 import java.util.List;
 
 import net.sf.json.JSONObject;
@@ -37,7 +39,8 @@ import net.sf.json.JSONObject;
  * @author Rusty Gerard
  * @since 1.0.0
  */
-public interface LogstashIndexerDao {
+public interface LogstashIndexerDao extends Serializable {
+  @Deprecated
   static enum IndexerType {
     REDIS,
     RABBIT_MQ,
@@ -45,9 +48,19 @@ public interface LogstashIndexerDao {
     SYSLOG
   }
 
-  String getDescription();
+  @Deprecated
+  static enum SyslogFormat {
+	RFC5424,
+	RFC3164
+  }
 
-  IndexerType getIndexerType();
+  static enum SyslogProtocol {
+	UDP
+  }
+
+  public void setCharset(Charset charset);
+
+  public String getDescription();
 
   /**
    * Sends the log data to the Logstash indexer.
@@ -57,8 +70,8 @@ public interface LogstashIndexerDao {
    * @throws java.io.IOException
    *          The data is not written to the server
    */
-  void push(String data) throws IOException;
-  
+  public void push(String data) throws IOException;
+
   // TODO: Incremental checkout?
   // TODO: Replace by a Collection output
   /**
@@ -82,5 +95,5 @@ public interface LogstashIndexerDao {
    *          The log data to transmit, not null
    * @return The formatted JSON object, never null
    */
-  JSONObject buildPayload(BuildData buildData, String jenkinsUrl, List<String> logLines);
+  public JSONObject buildPayload(BuildData buildData, String jenkinsUrl, List<String> logLines);
 }

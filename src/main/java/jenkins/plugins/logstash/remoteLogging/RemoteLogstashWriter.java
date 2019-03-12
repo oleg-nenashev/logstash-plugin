@@ -24,8 +24,8 @@
 package jenkins.plugins.logstash.remoteLogging;
 
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import jenkins.plugins.logstash.persistence.BuildData;
-import jenkins.plugins.logstash.persistence.IndexerDaoFactory;
 import jenkins.plugins.logstash.persistence.LogstashIndexerDao;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.logging.Level;
 import jenkins.model.Jenkins;
 import java.util.logging.Logger;
-import jenkins.plugins.logstash.LogstashInstallation;
 
 /**
  * A writer that wraps all Logstash DAOs. Handles error reporting and per build
@@ -61,29 +60,10 @@ public class RemoteLogstashWriter implements Serializable {
     LogstashIndexerDao dao;
     private boolean connectionBroken;
 
-    final IndexerDaoFactory.Info info;
-
-    public RemoteLogstashWriter(Run run, Jenkins jenkins) {
-        LogstashInstallation.Descriptor descriptor = LogstashInstallation.getLogstashDescriptor();
-        info = new IndexerDaoFactory.Info(descriptor.type, descriptor.host, descriptor.port, descriptor.key, descriptor.username, descriptor.password);
-
+    public RemoteLogstashWriter(Run run, Jenkins jenkins, TaskListener listener, LogstashIndexerDao dao) {
         this.jenkinsUrl = jenkins.getRootUrl();
-        this.buildData = new BuildData(run, new Date());;
-    }
-
-    public Object readResolve() {
-        init();
-        return this;
-    }
-
-    private void init() {
-        try {
-            dao = IndexerDaoFactory.getInstance(info);
-        } catch (InstantiationException ex) {
-            String msg = ExceptionUtils.getMessage(ex) + "\n"
-                    + "[logstash-plugin]: Unable to instantiate LogstashIndexerDao with current configuration.\n";
-            logErrorMessage(msg);
-        }
+        this.buildData = new BuildData(run, new Date(), listener);
+        this.dao = dao;
     }
 
     /**
@@ -115,7 +95,7 @@ public class RemoteLogstashWriter implements Serializable {
         try {
             dao.push(payload.toString());
         } catch (IOException e) {
-            String msg = "[logstash-plugin]: Failed to send log data to " + dao.getIndexerType() + ":" + dao.getDescription() + ".\n"
+            String msg = "[logstash-plugin]: Failed to send log data to " + dao.getDescription() + ".\n"
                     + "[logstash-plugin]: No Further logs will be sent to " + dao.getDescription() + ".\n"
                     + ExceptionUtils.getStackTrace(e);
             logErrorMessage(msg);

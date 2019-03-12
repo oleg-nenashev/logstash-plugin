@@ -10,8 +10,9 @@ import hudson.model.Action;
 import hudson.model.Run;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import jenkins.model.TransientActionFactory;
-import jenkins.plugins.logstash.util.UniqueIdHelper;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 
 /**
  * Produces Browsing links for the plugin.
@@ -28,8 +29,8 @@ public class EmbeddedLogActionFactory extends TransientActionFactory<Run> {
 
     @Override
     public Collection<? extends Action> createFor(Run target) {
-        return Arrays.<Action>asList(new KibanaEmbeddedLogAction(target), 
-                new ElasticsearchIncrementalLogAction(target));
+        return target instanceof WorkflowRun ? Collections.singleton(new KibanaEmbeddedLogAction(target)) :
+            Arrays.asList(new KibanaEmbeddedLogAction(target), new ElasticsearchIncrementalLogAction(target));
     }
     
 }

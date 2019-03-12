@@ -1,6 +1,9 @@
 Jenkins Logstash Plugin
 =======================
 
+Travis: [![Build Status](https://travis-ci.org/jenkinsci/logstash-plugin.svg?branch=master)](https://travis-ci.org/jenkinsci/logstash-plugin)
+Jenkins: [![Build Status](https://ci.jenkins.io/job/Plugins/job/logstash-plugin/job/master/badge/icon)](https://ci.jenkins.io/job/Plugins/job/logstash-plugin/job/master/)
+
 This plugin adds support for sending a job's console log to Logstash indexers such as ElasticSearch, RabbitMQ, or Redis.
 
 * see [Jenkins wiki](https://wiki.jenkins-ci.org/display/JENKINS/Logstash+Plugin) for detailed feature descriptions
@@ -22,7 +25,37 @@ Currently supported methods of input/output:
 * ElasticSearch {REST API}
 * Redis {format => 'json_event'}
 * RabbitMQ {mechanism => PLAIN}
-* Syslog {format => cee/json, protocol => UDP}
+* Syslog {format => cee/json ([RFC-5424](https://tools.ietf.org/html/rfc5424),[RFC-3164](https://tools.ietf.org/html/rfc3164)), protocol => UDP}
+
+Pipeline
+========
+
+Logstash plugin can be used as a publisher in pipeline jobs to send the whole log as a single document.
+
+```Groovy
+ node('master') {
+        sh'''
+        echo 'Hello, world!'
+        '''
+        logstashSend failBuild: true, maxLines: 1000
+ }
+```
+
+It can be used as a wrapper step to send each log line separately.
+
+Note: when you combine with timestamps step, you should make the timestamps the outer most block. Otherwise you get the timestamps as part of the log lines, basically duplicating the timestamp information. 
+
+```Groovy
+timestamps {
+  logstash {
+    node('somelabel') {
+      sh'''
+      echo 'Hello, World!'
+      '''
+    }
+  }
+}
+```
 
 License
 =======
@@ -39,6 +72,7 @@ Contributing
 Adding support for new indexers
 -------------------------------
 
-* Create a new class in the package `jenkins.plugins.logstash.persistence` that extends `AbstractLogstashIndexerDao`
-* Add a new entry to the enum `IndexerType` in `LogstashIndexerDao`
-* Add a new mapping to the `INDEXER_MAP` in `IndexerDaoFactory`
+* Implement the extension point `jenkins.plugins.logstash.configuration.LogstashIndexer` that will take your configuration. 
+Override the method `shouldRefreshInstance()` where you decide if a new dao instance must be created because the configuration has changed in the meantime.
+* Create a `configure-advanced.jelly` for the UI part of your configuration.
+* Create a new class that extends `jenkins.plugins.logstash.persistence.AbstractLogstashIndexerDao`. This class will do the actual work of pushing the logs to the indexer.
